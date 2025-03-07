@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { 
-  LayoutDashboard, MessageSquareDots, Users, Calendar, Settings, 
+  LayoutDashboard, MessageSquare, Users, Calendar, Settings, 
   Activity, LogOut, Menu, X, MessageCircle, BrainCircuit
 } from "lucide-react";
 
@@ -67,7 +66,6 @@ const Layout = ({ children }: LayoutProps) => {
     };
   }, []);
 
-  // Close sidebar on mobile navigation
   useEffect(() => {
     if (isMobileView) {
       setIsSidebarOpen(false);
@@ -90,7 +88,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: MessageCircle, label: "SMS Composer", to: "/sms-composer" },
     { icon: Users, label: "Contacts", to: "/contacts" },
     { icon: Calendar, label: "Scheduled", to: "/scheduled" },
-    { icon: MessageSquareDots, label: "Message Logs", to: "/message-logs" },
+    { icon: MessageSquare, label: "Message Logs", to: "/message-logs" },
     { icon: Activity, label: "Analytics", to: "/analytics" },
     { icon: Settings, label: "Settings", to: "/settings" },
   ];
@@ -101,7 +99,6 @@ const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen flex relative">
-      {/* Mobile Overlay */}
       {isSidebarOpen && isMobileView && (
         <div 
           className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
@@ -109,7 +106,6 @@ const Layout = ({ children }: LayoutProps) => {
         />
       )}
       
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed md:relative z-50 h-full flex flex-col bg-card border-r",
@@ -119,11 +115,10 @@ const Layout = ({ children }: LayoutProps) => {
           "md:left-0"
         )}
       >
-        {/* Logo + Close Button (Mobile) */}
         <div className="h-16 flex items-center justify-between px-4 border-b">
           <div className="flex items-center">
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
-              <MessageSquareDots size={18} className="text-white" />
+              <MessageSquare size={18} className="text-white" />
             </div>
             <h1 className="font-bold text-lg tracking-tight">SMS Sorcery</h1>
           </div>
@@ -139,7 +134,6 @@ const Layout = ({ children }: LayoutProps) => {
           )}
         </div>
         
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-3">
           <div className="space-y-1.5">
             {navItems.map((item) => (
@@ -155,7 +149,6 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
         </nav>
         
-        {/* User Profile */}
         <div className="border-t p-3">
           <Button
             variant="ghost"
@@ -167,12 +160,10 @@ const Layout = ({ children }: LayoutProps) => {
         </div>
       </aside>
       
-      {/* Main Content */}
       <main className={cn(
         "flex-1 min-h-screen flex flex-col bg-background transition-all duration-300",
         isSidebarOpen && !isMobileView ? "md:ml-64" : ""
       )}>
-        {/* Header */}
         <header className="h-16 border-b bg-card/80 backdrop-blur-sm sticky top-0 z-30 flex items-center px-4">
           <Button
             variant="ghost"
@@ -194,7 +185,6 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
         </header>
         
-        {/* Content */}
         <div className="flex-1 overflow-auto">
           <div className="container py-6 animate-fade-in">
             {children}

@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui-custom/Card";
 import { Button } from "@/components/ui-custom/Button";
 import { Input } from "@/components/ui/input";
-import { MessageSquareDots, Mail, Lock, ArrowRight, Loader2, User } from "lucide-react";
+import { MessageSquare, Mail, Lock, ArrowRight, Loader2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,7 +26,6 @@ const AuthForm = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validate inputs
     if (!email || !password || (mode === "signup" && !name)) {
       toast({
         title: "Missing Information",
@@ -38,7 +36,6 @@ const AuthForm = () => {
       return;
     }
 
-    // Simulate authentication
     setTimeout(() => {
       setIsLoading(false);
       toast({
@@ -55,7 +52,7 @@ const AuthForm = () => {
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
         <div className="h-12 w-12 bg-primary rounded-xl inline-flex items-center justify-center mb-4">
-          <MessageSquareDots size={24} className="text-white" />
+          <MessageSquare size={24} className="text-white" />
         </div>
         <h1 className="text-2xl font-bold">SMS Sorcery</h1>
         <p className="text-muted-foreground mt-2">

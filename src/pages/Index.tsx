@@ -1,7 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { MessageSquareDots, ArrowRight, BrainCircuit, Zap, BarChart3, Calendar } from "lucide-react";
+import { MessageSquare, ArrowRight, BrainCircuit, Zap, BarChart3, Calendar } from "lucide-react";
 
 const Index = () => {
   return (
@@ -11,7 +10,7 @@ const Index = () => {
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <div className="flex items-center">
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
-              <MessageSquareDots size={18} className="text-white" />
+              <MessageSquare size={18} className="text-white" />
             </div>
             <h1 className="font-bold text-lg tracking-tight">SMS Sorcery</h1>
           </div>
@@ -132,7 +131,7 @@ const Index = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-6 md:mb-0">
               <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
-                <MessageSquareDots size={18} className="text-white" />
+                <MessageSquare size={18} className="text-white" />
               </div>
               <span className="font-bold">SMS Sorcery</span>
             </div>
