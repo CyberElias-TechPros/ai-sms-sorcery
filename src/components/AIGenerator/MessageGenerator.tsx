@@ -13,13 +13,22 @@ import {
   Copy, 
   PlusCircle, 
   MessageSquare,
-  Send
+  Send,
+  AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { generateWhatsAppLink } from "@/utils/whatsappUtils";
+import { 
+  generateWhatsAppLink, 
+  smartDelay, 
+  addRandomization, 
+  canSendMoreMessages, 
+  incrementMessageCounter,
+  getRemainingMessageCount
+} from "@/utils/whatsappUtils";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const MessageGenerator = () => {
   const [prompt, setPrompt] = useState("");
@@ -29,6 +38,8 @@ const MessageGenerator = () => {
   const [messageType, setMessageType] = useState("marketing");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [enableWhatsApp, setEnableWhatsApp] = useState(true);
+  const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
+  const [isRandomized, setIsRandomized] = useState(true);
   const { toast } = useToast();
   
   const generateMessage = () => {
@@ -46,7 +57,7 @@ const MessageGenerator = () => {
     // Simulate AI generation (would be replaced with actual API call)
     setTimeout(() => {
       const messages = {
-        marketing: "🌟 Limited time offer! Get 25% off on all premium plans. Upgrade now to access exclusive features and boost your productivity. Reply YES to claim your discount!",
+        marketing: "Limited time offer! Get 25% off on all premium plans. Upgrade now to access exclusive features and boost your productivity. Reply YES to claim your discount!",
         reminder: "Friendly reminder: Your appointment is scheduled for tomorrow at 2:00 PM. Please arrive 10 minutes early. Reply CONFIRM to confirm your attendance or call us to reschedule.",
         notification: "Your package has been shipped and is on its way! Tracking number: TRK12345. Estimated delivery: June 10th. Track your package at example.com/track",
         alert: "ALERT: We detected unusual activity on your account. If this wasn't you, please contact our security team immediately at 1-800-123-4567 or reply HELP for assistance."
@@ -96,15 +107,49 @@ const MessageGenerator = () => {
       return;
     }
 
+    // Check if we can send more messages (anti-spam)
+    if (!canSendMoreMessages()) {
+      toast({
+        title: "Message Limit Reached",
+        description: `You've reached the hourly limit of WhatsApp messages. Please try again later.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Open confirmation dialog
+    setShowWhatsAppDialog(true);
+  };
+
+  const confirmWhatsAppSend = () => {
+    // Close dialog
+    setShowWhatsAppDialog(false);
+    
+    // Add message randomization if enabled
+    let finalMessage = generatedMessage;
+    if (isRandomized) {
+      finalMessage = addRandomization(generatedMessage);
+    }
+    
     // Generate WhatsApp link
-    const whatsappLink = generateWhatsAppLink(phoneNumber, generatedMessage);
+    const whatsappLink = generateWhatsAppLink(phoneNumber, finalMessage);
     
     // Open WhatsApp
     window.open(whatsappLink, '_blank');
     
+    // Increment counter for rate limiting
+    incrementMessageCounter();
+    
     toast({
       title: "WhatsApp Opening",
       description: "WhatsApp is opening with your message. Please confirm to send.",
+    });
+    
+    // Show remaining message count
+    toast({
+      title: "Message Quota",
+      description: `You have ${getRemainingMessageCount()} WhatsApp messages remaining this hour.`,
+      variant: "default",
     });
   };
 
@@ -292,12 +337,27 @@ const MessageGenerator = () => {
                     />
                   </div>
                   
+                  <div className="flex items-center mb-2">
+                    <Switch 
+                      id="randomize-switch"
+                      checked={isRandomized}
+                      onCheckedChange={setIsRandomized}
+                      className="mr-2"
+                    />
+                    <label 
+                      htmlFor="randomize-switch" 
+                      className="text-xs text-muted-foreground cursor-pointer"
+                    >
+                      Add slight message variations to avoid spam detection
+                    </label>
+                  </div>
+                  
                   <div className="bg-muted/30 p-3 rounded-lg text-xs text-muted-foreground">
                     <p className="font-medium text-foreground mb-1">WhatsApp Sending Notes:</p>
                     <ul className="list-disc pl-4 space-y-1">
                       <li>Number must include country code (e.g., +1 for US)</li>
                       <li>Will open WhatsApp for manual confirmation (prevents spam)</li>
-                      <li>Works with both mobile and desktop WhatsApp</li>
+                      <li>Limited to {getRemainingMessageCount()} messages per hour (anti-spam measure)</li>
                     </ul>
                   </div>
                   
@@ -345,6 +405,35 @@ const MessageGenerator = () => {
           </Button>
         </CardFooter>
       </Card>
+
+      {/* WhatsApp Confirmation Dialog */}
+      <AlertDialog open={showWhatsAppDialog} onOpenChange={setShowWhatsAppDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              Confirm WhatsApp Message
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You're about to open WhatsApp to send a message to <span className="font-medium">{phoneNumber}</span>.
+              <div className="mt-4 p-3 bg-muted rounded-md">
+                <p className="text-sm text-foreground">
+                  {isRandomized ? addRandomization(generatedMessage) : generatedMessage}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmWhatsAppSend}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Proceed to WhatsApp
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
