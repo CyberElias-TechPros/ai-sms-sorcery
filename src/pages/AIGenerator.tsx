@@ -7,17 +7,17 @@ import { Badge } from "@/components/ui-custom/Badge";
 import { Link } from "react-router-dom";
 import { 
   BrainCircuit, ArrowLeft, ArrowRight, 
-  Lightbulb, HelpCircle, Save, History
+  Lightbulb, HelpCircle, Save, History, MessageSquare
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Suggestion prompts for users
 const suggestionPrompts = [
-  "Create a promotional SMS for a 30% off flash sale",
-  "Write a gentle reminder SMS for an upcoming appointment",
+  "Create a promotional message for a 30% off flash sale",
+  "Write a gentle reminder for an upcoming appointment",
   "Draft a shipping notification for an e-commerce order",
-  "Compose a follow-up SMS for after a customer purchase",
-  "Generate a welcome SMS for new subscribers to a service"
+  "Compose a follow-up message for after a customer purchase",
+  "Generate a welcome message for new subscribers to a service"
 ];
 
 const AIGenerator = () => {
@@ -40,7 +40,7 @@ const AIGenerator = () => {
             </div>
             <h1 className="text-2xl font-bold tracking-tight">AI Message Generator</h1>
             <p className="text-muted-foreground">
-              Create SMS messages powered by artificial intelligence
+              Create messages powered by artificial intelligence for SMS and WhatsApp
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -58,7 +58,7 @@ const AIGenerator = () => {
         {/* Tabs */}
         <Tabs defaultValue="generator" className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="generator">Generator</TabsTrigger>
+            <TabsTrigger value="generator">Single Message</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Generation</TabsTrigger>
           </TabsList>
           <TabsContent value="generator" className="pt-4 animate-fade-in">
@@ -93,12 +93,38 @@ const AIGenerator = () => {
                   </CardContent>
                 </Card>
                 
+                {/* WhatsApp Tips */}
+                <Card variant="border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center">
+                      <MessageSquare size={16} className="mr-2 text-green-600" />
+                      WhatsApp Tips
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <div className="space-y-3 text-xs text-muted-foreground">
+                      <p>
+                        <span className="font-medium text-foreground">Include country code: </span>
+                        Always include the country code (e.g., +1 for US).
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">Manual confirmation: </span>
+                        WhatsApp will open and require manual sending to prevent spam.
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">Personalize: </span>
+                        Personalized messages perform better and reduce spam flags.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
                 {/* Tips */}
                 <Card variant="border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium flex items-center">
                       <HelpCircle size={16} className="mr-2 text-primary" />
-                      Tips
+                      General Tips
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-2">
@@ -109,7 +135,7 @@ const AIGenerator = () => {
                       </p>
                       <p>
                         <span className="font-medium text-foreground">Keep it brief: </span>
-                        SMS messages work best when under 160 characters.
+                        Messages work best when under 160 characters.
                       </p>
                       <p>
                         <span className="font-medium text-foreground">Include a CTA: </span>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -120,7 +121,7 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
               <MessageSquare size={18} className="text-white" />
             </div>
-            <h1 className="font-bold text-lg tracking-tight">SMS Sorcery</h1>
+            <h1 className="font-bold text-lg tracking-tight">SMS Messenger</h1>
           </div>
           {isMobileView && (
             <Button 

@@ -6,9 +6,20 @@ import { Badge } from "@/components/ui-custom/Badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BrainCircuit, Sparkles, RefreshCw, Copy, PlusCircle, MessageSquare } from "lucide-react";
+import { 
+  BrainCircuit, 
+  Sparkles, 
+  RefreshCw, 
+  Copy, 
+  PlusCircle, 
+  MessageSquare,
+  Send
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { generateWhatsAppLink } from "@/utils/whatsappUtils";
 
 const MessageGenerator = () => {
   const [prompt, setPrompt] = useState("");
@@ -16,6 +27,8 @@ const MessageGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiModel, setAiModel] = useState("gpt-4");
   const [messageType, setMessageType] = useState("marketing");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [enableWhatsApp, setEnableWhatsApp] = useState(true);
   const { toast } = useToast();
   
   const generateMessage = () => {
@@ -61,6 +74,38 @@ const MessageGenerator = () => {
   const clearAll = () => {
     setPrompt("");
     setGeneratedMessage("");
+    setPhoneNumber("");
+  };
+
+  const sendToWhatsApp = () => {
+    if (!phoneNumber) {
+      toast({
+        title: "Missing Phone Number",
+        description: "Please enter a phone number to send via WhatsApp.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!generatedMessage) {
+      toast({
+        title: "No Message",
+        description: "Please generate a message first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Generate WhatsApp link
+    const whatsappLink = generateWhatsAppLink(phoneNumber, generatedMessage);
+    
+    // Open WhatsApp
+    window.open(whatsappLink, '_blank');
+    
+    toast({
+      title: "WhatsApp Opening",
+      description: "WhatsApp is opening with your message. Please confirm to send.",
+    });
   };
 
   const messageTypeOptions = [
@@ -160,7 +205,7 @@ const MessageGenerator = () => {
         <CardHeader className="pb-3 border-b">
           <CardTitle className="flex items-center">
             <MessageSquare className="mr-2 h-5 w-5 text-primary" />
-            Generated SMS
+            Generated Message
           </CardTitle>
           <CardDescription>
             Preview and edit your AI-generated message
@@ -176,7 +221,7 @@ const MessageGenerator = () => {
               {generatedMessage ? (
                 <div className="p-4 border rounded-lg h-full flex flex-col">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge size="sm" variant="secondary">SMS Preview</Badge>
+                    <Badge size="sm" variant="secondary">Message Preview</Badge>
                     <Badge size="sm" variant="outline">{aiModel}</Badge>
                   </div>
                   <div className="flex-1 bg-muted/30 rounded-lg p-4 shadow-sm">
@@ -190,7 +235,7 @@ const MessageGenerator = () => {
                   <BrainCircuit size={40} className="mb-3 text-muted" />
                   <h3 className="text-lg font-medium mb-2">No Message Generated Yet</h3>
                   <p className="text-sm max-w-md">
-                    Fill in the details on the left panel and click "Generate Message" to create an AI-powered SMS.
+                    Fill in the details on the left panel and click "Generate Message" to create an AI-powered message.
                   </p>
                 </div>
               )}
@@ -204,6 +249,71 @@ const MessageGenerator = () => {
               />
             </TabsContent>
           </Tabs>
+          
+          {/* WhatsApp Sending Section */}
+          {generatedMessage && (
+            <div className="mt-4 border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <Switch 
+                    id="whatsapp-switch"
+                    checked={enableWhatsApp}
+                    onCheckedChange={setEnableWhatsApp}
+                    className="mr-2"
+                  />
+                  <label 
+                    htmlFor="whatsapp-switch" 
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Send via WhatsApp
+                  </label>
+                </div>
+                
+                <Badge 
+                  variant="outline" 
+                  className="bg-green-500/10 border-green-500/20 text-green-600"
+                >
+                  Anti-Spam Protected
+                </Badge>
+              </div>
+              
+              {enableWhatsApp && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">
+                      Recipient's Phone Number (with country code)
+                    </label>
+                    <Input
+                      type="tel"
+                      placeholder="e.g. +1234567890"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div className="bg-muted/30 p-3 rounded-lg text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground mb-1">WhatsApp Sending Notes:</p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>Number must include country code (e.g., +1 for US)</li>
+                      <li>Will open WhatsApp for manual confirmation (prevents spam)</li>
+                      <li>Works with both mobile and desktop WhatsApp</li>
+                    </ul>
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 bg-green-500/10 border-green-500/20 text-green-600 hover:bg-green-500/20 hover:text-green-700"
+                    onClick={sendToWhatsApp}
+                    disabled={!enableWhatsApp || !phoneNumber}
+                  >
+                    <Send size={14} />
+                    Send to WhatsApp
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
         <CardFooter className="flex justify-between border-t pt-4">
           <div className="flex gap-2">

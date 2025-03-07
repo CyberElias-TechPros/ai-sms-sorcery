@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { MessageSquare, ArrowRight, BrainCircuit, Zap, BarChart3, Calendar } from "lucide-react";
@@ -12,7 +13,7 @@ const Index = () => {
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
               <MessageSquare size={18} className="text-white" />
             </div>
-            <h1 className="font-bold text-lg tracking-tight">SMS Sorcery</h1>
+            <h1 className="font-bold text-lg tracking-tight">SMS Messenger</h1>
           </div>
           
           <div className="hidden md:flex items-center space-x-6">
@@ -38,18 +39,18 @@ const Index = () => {
         <div className="container mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center justify-center px-3 py-1 mb-6 border border-border rounded-full bg-background/50 backdrop-blur-sm">
-              <span className="text-xs font-medium text-muted-foreground">AI-Powered SMS Platform</span>
+              <span className="text-xs font-medium text-muted-foreground">AI-Powered Messaging Platform</span>
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 animate-slide-down">
-              Transform your SMS with 
+              Transform your messaging with 
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent ml-2">
-                AI Magic
+                Divine AI
               </span>
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-slide-down animate-delay-100">
-              Create personalized, engaging SMS messages with artificial intelligence. Connect your favorite SMS APIs and automate your messaging workflow.
+              Create personalized, engaging messages with divine intelligence. Connect your favorite messaging APIs and spread your message with faith and purpose.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-down animate-delay-200">
@@ -73,7 +74,7 @@ const Index = () => {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Powerful Features</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to create, send, and analyze your SMS campaigns
+              Everything you need to create, send, and analyze your message campaigns
             </p>
           </div>
           
@@ -85,7 +86,7 @@ const Index = () => {
               </div>
               <h3 className="text-lg font-medium mb-2">AI-Powered Generation</h3>
               <p className="text-muted-foreground text-sm">
-                Create engaging SMS messages using advanced AI models like GPT-4, Claude, and Gemini.
+                Create engaging messages using advanced AI models like GPT-4, Claude, and Gemini.
               </p>
             </div>
             
@@ -94,9 +95,9 @@ const Index = () => {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                 <Zap className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-lg font-medium mb-2">Multiple API Integrations</h3>
+              <h3 className="text-lg font-medium mb-2">Multiple Channel Support</h3>
               <p className="text-muted-foreground text-sm">
-                Connect with Twilio, Termii, Infobip and other SMS providers through a single interface.
+                Connect with SMS, WhatsApp, and other messaging channels through a single interface.
               </p>
             </div>
             
@@ -133,7 +134,7 @@ const Index = () => {
               <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
                 <MessageSquare size={18} className="text-white" />
               </div>
-              <span className="font-bold">SMS Sorcery</span>
+              <span className="font-bold">SMS Messenger</span>
             </div>
             
             <div className="flex flex-wrap justify-center gap-6 mb-6 md:mb-0">
@@ -145,7 +146,7 @@ const Index = () => {
             </div>
             
             <div className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} SMS Sorcery. All rights reserved.
+              &copy; {new Date().getFullYear()} SMS Messenger. All rights reserved.
             </div>
           </div>
         </div>
