@@ -17,7 +17,7 @@ const SAMPLE_TEMPLATES: MessageTemplateType[] = [
   {
     id: 'template_1',
     title: 'Welcome Message',
-    content: 'Welcome to our service! We're excited to have you on board. Reply HELP for assistance or STOP to unsubscribe.',
+    content: "Welcome to our service! We're excited to have you on board. Reply HELP for assistance or STOP to unsubscribe.",
     category: 'marketing',
     createdAt: '2023-05-15T10:30:00Z',
     usageCount: 145,
@@ -58,7 +58,7 @@ const SAMPLE_TEMPLATES: MessageTemplateType[] = [
   {
     id: 'template_6',
     title: 'Event Invitation',
-    content: 'You're invited! Join us for {{event_name}} on {{event_date}} at {{event_location}}. RSVP by replying YES or NO.',
+    content: "You're invited! Join us for {{event_name}} on {{event_date}} at {{event_location}}. RSVP by replying YES or NO.",
     category: 'notification',
     createdAt: '2023-08-01T13:25:00Z',
     model: 'gpt-4',
