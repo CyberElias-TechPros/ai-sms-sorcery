@@ -3,7 +3,8 @@
  * API Services for messaging and AI features
  */
 
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { MessageTemplateType } from "@/hooks/useMessageTemplates";
 
 // API configuration types
 type SmsApiConfig = {
@@ -112,10 +113,7 @@ export const sendSms = async (
     const success = Math.random() > 0.1; // 90% success rate
     
     if (success) {
-      toast({
-        title: "Message Sent",
-        description: `Message sent to ${recipients.length} recipient(s)`,
-      });
+      toast.success(`Message sent to ${recipients.length} recipient(s)`);
       return true;
     } else {
       throw new Error("Failed to send message");
@@ -123,11 +121,7 @@ export const sendSms = async (
   } catch (error) {
     console.error("Error sending SMS:", error);
     
-    toast({
-      title: "Failed to Send Message",
-      description: error instanceof Error ? error.message : "Unknown error occurred",
-      variant: "destructive",
-    });
+    toast.error(error instanceof Error ? error.message : "Unknown error occurred");
     
     return false;
   }
@@ -153,20 +147,13 @@ export const scheduleMessage = async (
     // Generate a random ID for the scheduled message
     const messageId = `msg_${Math.random().toString(36).substring(2, 15)}`;
     
-    toast({
-      title: "Message Scheduled",
-      description: `Message scheduled for ${scheduledTime.toLocaleString()}`,
-    });
+    toast.success(`Message scheduled for ${scheduledTime.toLocaleString()}`);
     
     return messageId;
   } catch (error) {
     console.error("Error scheduling message:", error);
     
-    toast({
-      title: "Failed to Schedule Message",
-      description: error instanceof Error ? error.message : "Unknown error occurred",
-      variant: "destructive",
-    });
+    toast.error(error instanceof Error ? error.message : "Unknown error occurred");
     
     return null;
   }
@@ -223,18 +210,14 @@ export const generateAiMessage = async (
   } catch (error) {
     console.error("Error generating AI message:", error);
     
-    toast({
-      title: "Failed to Generate Message",
-      description: error instanceof Error ? error.message : "AI generation failed",
-      variant: "destructive",
-    });
+    toast.error(error instanceof Error ? error.message : "AI generation failed");
     
     return "Error generating message. Please try again.";
   }
 };
 
 // Template management functions
-export const getMessageTemplates = async (): Promise<MessageTemplate[]> => {
+export const getMessageTemplates = async (): Promise<MessageTemplateType[]> => {
   try {
     // In a real app, this would be an API call
     await new Promise(resolve => setTimeout(resolve, 800));
@@ -252,11 +235,11 @@ export const getMessageTemplates = async (): Promise<MessageTemplate[]> => {
   }
 };
 
-export const saveMessageTemplate = async (template: Omit<MessageTemplate, 'id'>): Promise<MessageTemplate | null> => {
+export const saveMessageTemplate = async (template: Omit<MessageTemplateType, 'id'>): Promise<MessageTemplateType | null> => {
   try {
     // Generate ID for new template
     const id = `template_${Date.now()}`;
-    const newTemplate: MessageTemplate = {
+    const newTemplate: MessageTemplateType = {
       ...template,
       id,
       usageCount: 0
@@ -276,7 +259,7 @@ export const saveMessageTemplate = async (template: Omit<MessageTemplate, 'id'>)
   }
 };
 
-export const updateMessageTemplate = async (id: string, updates: Partial<MessageTemplate>): Promise<boolean> => {
+export const updateMessageTemplate = async (id: string, updates: Partial<MessageTemplateType>): Promise<boolean> => {
   try {
     // Get existing templates
     const templates = await getMessageTemplates();
@@ -317,11 +300,7 @@ export const deleteMessageTemplate = async (id: string): Promise<boolean> => {
 // Test API connections
 export const testSmsApiConnection = async (): Promise<boolean> => {
   if (!smsConfig.apiKey) {
-    toast({
-      title: "API Key Required",
-      description: "Please enter an API key to test the connection",
-      variant: "destructive",
-    });
+    toast.error("Please enter an API key to test the connection");
     return false;
   }
   
@@ -329,18 +308,11 @@ export const testSmsApiConnection = async (): Promise<boolean> => {
     // Simulate API test
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    toast({
-      title: "Connection Successful",
-      description: `Successfully connected to ${smsConfig.provider} API`,
-    });
+    toast.success(`Successfully connected to ${smsConfig.provider} API`);
     
     return true;
   } catch (error) {
-    toast({
-      title: "Connection Failed",
-      description: error instanceof Error ? error.message : "Failed to connect to SMS API",
-      variant: "destructive",
-    });
+    toast.error(error instanceof Error ? error.message : "Failed to connect to SMS API");
     
     return false;
   }
@@ -348,11 +320,7 @@ export const testSmsApiConnection = async (): Promise<boolean> => {
 
 export const testAiApiConnection = async (): Promise<boolean> => {
   if (!aiConfig.apiKey) {
-    toast({
-      title: "API Key Required",
-      description: "Please enter an API key to test the connection",
-      variant: "destructive",
-    });
+    toast.error("Please enter an API key to test the connection");
     return false;
   }
   
@@ -360,18 +328,11 @@ export const testAiApiConnection = async (): Promise<boolean> => {
     // Simulate API test
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    toast({
-      title: "Connection Successful",
-      description: `Successfully connected to ${aiConfig.provider} API (${aiConfig.model})`,
-    });
+    toast.success(`Successfully connected to ${aiConfig.provider} API (${aiConfig.model})`);
     
     return true;
   } catch (error) {
-    toast({
-      title: "Connection Failed",
-      description: error instanceof Error ? error.message : "Failed to connect to AI API",
-      variant: "destructive",
-    });
+    toast.error(error instanceof Error ? error.message : "Failed to connect to AI API");
     
     return false;
   }

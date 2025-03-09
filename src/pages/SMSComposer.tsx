@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui-custom/Card";
 import { Button } from "@/components/ui-custom/Button";
@@ -7,46 +7,18 @@ import { Badge } from "@/components/ui-custom/Badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import ContactsSearch, { Contact } from "@/components/Contacts/ContactsSearch";
 import MessageTemplate from "@/components/Messaging/MessageTemplate";
 import { useToast } from "@/hooks/use-toast";
 import { sendSms, scheduleMessage, MessageRecipient, MessageContent } from "@/utils/apiServices";
+import { useMessageTemplates } from "@/hooks/useMessageTemplates";
 import { 
   MessageSquare, Calendar, Send, ArrowLeft, Plus, 
   Copy, Clock, ImagePlus, BrainCircuit, UploadCloud
 } from "lucide-react";
-
-// Sample templates
-const sampleTemplates = [
-  {
-    id: "t1",
-    title: "Appointment Reminder",
-    content: "Hi {name}, this is a reminder for your appointment tomorrow at 2:00 PM. Please arrive 10 minutes early. Reply CONFIRM to confirm or call us to reschedule.",
-    category: "reminder",
-    createdAt: "2023-05-15T10:30:00Z",
-    usageCount: 24
-  },
-  {
-    id: "t2",
-    title: "Product Launch",
-    content: "Exciting news! Our new product line launches next week. Be first to shop with 15% off using code FIRST15. Early access opens Monday at 9AM. Don't miss out!",
-    category: "marketing",
-    createdAt: "2023-06-01T14:45:00Z",
-    usageCount: 12,
-    model: "GPT-4"
-  },
-  {
-    id: "t3",
-    title: "Order Confirmation",
-    content: "Thank you for your order #{orderID}! Your items are being prepared for shipping. Track your delivery at example.com/track. Questions? Reply to this message.",
-    category: "notification",
-    createdAt: "2023-05-20T09:15:00Z",
-    usageCount: 87
-  }
-];
 
 const SMSComposer = () => {
   const [message, setMessage] = useState("");
@@ -59,6 +31,14 @@ const SMSComposer = () => {
   const [characterCount, setCharacterCount] = useState(0);
   const [mediaEnabled, setMediaEnabled] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Use the template hook instead of hardcoded templates
+  const { templates, loadTemplates, isLoading } = useMessageTemplates();
+  
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
   
   const handleContactSelection = (contacts: Contact[]) => {
     setSelectedContacts(contacts);
@@ -151,6 +131,17 @@ const SMSComposer = () => {
           setEnableScheduling(false);
           setScheduleDate("");
           setScheduleTime("");
+          
+          // Navigate to scheduled messages
+          toast({
+            title: "Success",
+            description: "Message has been scheduled successfully",
+          });
+          
+          // Optional: redirect to scheduled messages page
+          setTimeout(() => {
+            navigate("/scheduled");
+          }, 1500);
         }
       } else {
         // Send immediately
@@ -160,6 +151,17 @@ const SMSComposer = () => {
           // Clear form after successful send
           setMessage("");
           setSelectedContacts([]);
+          
+          // Navigate to message logs
+          toast({
+            title: "Success",
+            description: "Message has been sent successfully",
+          });
+          
+          // Optional: redirect to message logs
+          setTimeout(() => {
+            navigate("/message-logs");
+          }, 1500);
         }
       }
     } catch (error) {
@@ -342,10 +344,11 @@ const SMSComposer = () => {
                     </div>
                     <Button
                       onClick={handleSendMessage}
-                      loading={isSending}
-                      disabled={message.trim() === "" || selectedContacts.length === 0}
+                      disabled={message.trim() === "" || selectedContacts.length === 0 || isSending}
                     >
-                      {!isSending && (
+                      {isSending ? (
+                        "Processing..."
+                      ) : (
                         enableScheduling ? (
                           <>
                             <Calendar className="mr-2 h-4 w-4" />
@@ -358,7 +361,6 @@ const SMSComposer = () => {
                           </>
                         )
                       )}
-                      {enableScheduling ? "Schedule Message" : "Send Message"}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -368,40 +370,63 @@ const SMSComposer = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-base font-medium">Saved Templates</h3>
-                    <Button size="sm">
-                      <Plus size={14} className="mr-1" />
-                      Create New Template
-                    </Button>
+                    <Link to="/message-templates">
+                      <Button size="sm">
+                        <Plus size={14} className="mr-1" />
+                        Manage Templates
+                      </Button>
+                    </Link>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {sampleTemplates.map(template => (
-                      <MessageTemplate
-                        key={template.id}
-                        {...template}
-                        onUse={useTemplate}
-                        onEdit={(id) => {
-                          toast({
-                            title: "Edit Template",
-                            description: `Editing template: ${id}`,
-                          });
-                        }}
-                        onDelete={(id) => {
-                          toast({
-                            title: "Template Deleted",
-                            description: `Template has been deleted`,
-                          });
-                        }}
-                      />
-                    ))}
-                  </div>
-                  
-                  <div className="flex justify-center p-4 border border-dashed rounded-lg">
-                    <Button variant="outline">
-                      <UploadCloud className="mr-2 h-4 w-4" />
-                      Import Templates
-                    </Button>
-                  </div>
+                  {isLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[1, 2, 3, 4].map((i) => (
+                        <Card key={i} className="opacity-50 animate-pulse">
+                          <CardHeader className="pb-3">
+                            <div className="h-5 w-32 bg-muted rounded"></div>
+                            <div className="h-3 w-20 bg-muted rounded"></div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="h-24 bg-muted rounded"></div>
+                          </CardContent>
+                          <CardFooter>
+                            <div className="h-8 w-full bg-muted rounded"></div>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : templates.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-8 text-center">
+                        <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                          <MessageSquare className="h-6 w-6 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-medium mb-1">No templates found</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Create your first message template to get started
+                        </p>
+                        <Link to="/message-templates">
+                          <Button>
+                            <Plus size={16} className="mr-1" />
+                            Create Template
+                          </Button>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {templates.map(template => (
+                        <MessageTemplate
+                          key={template.id}
+                          {...template}
+                          onUse={useTemplate}
+                          showActions={false}
+                          onEdit={() => {}}
+                          onDelete={() => {}}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
