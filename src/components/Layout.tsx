@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, MessageSquare, Users, Calendar, Settings, 
-  Activity, LogOut, Menu, X, MessageCircle, BrainCircuit
+  Activity, LogOut, Menu, X, MessageCircle, BrainCircuit,
+  FileText
 } from "lucide-react";
 
 interface SidebarItemProps {
@@ -87,6 +87,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: LayoutDashboard, label: "Dashboard", to: "/dashboard" },
     { icon: BrainCircuit, label: "AI Generator", to: "/ai-generator" },
     { icon: MessageCircle, label: "SMS Composer", to: "/sms-composer" },
+    { icon: FileText, label: "Templates", to: "/message-templates" },
     { icon: Users, label: "Contacts", to: "/contacts" },
     { icon: Calendar, label: "Scheduled", to: "/scheduled" },
     { icon: MessageSquare, label: "Message Logs", to: "/message-logs" },

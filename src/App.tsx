@@ -15,6 +15,7 @@ import Scheduled from "./pages/Scheduled";
 import MessageLogs from "./pages/MessageLogs";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import MessageTemplates from "./pages/MessageTemplates";
 
 // Initialize QueryClient for React Query
 const queryClient = new QueryClient({
@@ -26,6 +27,15 @@ const queryClient = new QueryClient({
   },
 });
 
+// Simple auth protection - in a real app, this would be more robust
+const AuthRoute = ({ element }: { element: React.ReactNode }) => {
+  // For demo purposes, always consider user logged in
+  // In production, this would check for valid auth tokens
+  const isAuthenticated = true; // localStorage.getItem('auth_token') !== null;
+  
+  return isAuthenticated ? element : <Navigate to="/auth" replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -34,15 +44,18 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/ai-generator" element={<AIGenerator />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/sms-composer" element={<SMSComposer />} />
-          <Route path="/contacts" element={<Contacts />} />
-          <Route path="/scheduled" element={<Scheduled />} />
-          <Route path="/message-logs" element={<MessageLogs />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/settings" element={<Settings />} />
+          
+          {/* Protected Routes */}
+          <Route path="/dashboard" element={<AuthRoute element={<Dashboard />} />} />
+          <Route path="/ai-generator" element={<AuthRoute element={<AIGenerator />} />} />
+          <Route path="/sms-composer" element={<AuthRoute element={<SMSComposer />} />} />
+          <Route path="/contacts" element={<AuthRoute element={<Contacts />} />} />
+          <Route path="/scheduled" element={<AuthRoute element={<Scheduled />} />} />
+          <Route path="/message-logs" element={<AuthRoute element={<MessageLogs />} />} />
+          <Route path="/analytics" element={<AuthRoute element={<Analytics />} />} />
+          <Route path="/settings" element={<AuthRoute element={<Settings />} />} />
+          <Route path="/message-templates" element={<AuthRoute element={<MessageTemplates />} />} />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />

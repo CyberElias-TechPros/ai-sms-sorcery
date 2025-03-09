@@ -39,6 +39,16 @@ export type ScheduledMessage = MessageContent & {
   id: string;
 };
 
+export type MessageTemplate = {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  createdAt: string;
+  usageCount?: number;
+  model?: string;
+};
+
 // Default configurations
 let smsConfig: SmsApiConfig = {
   provider: 'twilio',
@@ -58,6 +68,7 @@ let aiConfig: AiApiConfig = {
 // Storage keys
 const SMS_CONFIG_KEY = 'sms_api_config';
 const AI_CONFIG_KEY = 'ai_api_config';
+const TEMPLATES_KEY = 'message_templates';
 
 // Load configurations from localStorage if available
 try {
@@ -219,6 +230,87 @@ export const generateAiMessage = async (
     });
     
     return "Error generating message. Please try again.";
+  }
+};
+
+// Template management functions
+export const getMessageTemplates = async (): Promise<MessageTemplate[]> => {
+  try {
+    // In a real app, this would be an API call
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const savedTemplates = localStorage.getItem(TEMPLATES_KEY);
+    if (savedTemplates) {
+      return JSON.parse(savedTemplates);
+    }
+    
+    // Return empty array if no templates found
+    return [];
+  } catch (error) {
+    console.error("Error fetching templates:", error);
+    return [];
+  }
+};
+
+export const saveMessageTemplate = async (template: Omit<MessageTemplate, 'id'>): Promise<MessageTemplate | null> => {
+  try {
+    // Generate ID for new template
+    const id = `template_${Date.now()}`;
+    const newTemplate: MessageTemplate = {
+      ...template,
+      id,
+      usageCount: 0
+    };
+    
+    // Get existing templates
+    const templates = await getMessageTemplates();
+    templates.unshift(newTemplate);
+    
+    // Save to localStorage
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+    
+    return newTemplate;
+  } catch (error) {
+    console.error("Error saving template:", error);
+    return null;
+  }
+};
+
+export const updateMessageTemplate = async (id: string, updates: Partial<MessageTemplate>): Promise<boolean> => {
+  try {
+    // Get existing templates
+    const templates = await getMessageTemplates();
+    
+    // Find and update the template
+    const updatedTemplates = templates.map(template => 
+      template.id === id ? { ...template, ...updates } : template
+    );
+    
+    // Save to localStorage
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updatedTemplates));
+    
+    return true;
+  } catch (error) {
+    console.error("Error updating template:", error);
+    return false;
+  }
+};
+
+export const deleteMessageTemplate = async (id: string): Promise<boolean> => {
+  try {
+    // Get existing templates
+    const templates = await getMessageTemplates();
+    
+    // Filter out the template to delete
+    const updatedTemplates = templates.filter(template => template.id !== id);
+    
+    // Save to localStorage
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updatedTemplates));
+    
+    return true;
+  } catch (error) {
+    console.error("Error deleting template:", error);
+    return false;
   }
 };
 
