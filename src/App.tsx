@@ -9,6 +9,12 @@ import Dashboard from "./pages/Dashboard";
 import AIGenerator from "./pages/AIGenerator";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import SMSComposer from "./pages/SMSComposer";
+import Contacts from "./pages/Contacts";
+import Scheduled from "./pages/Scheduled";
+import MessageLogs from "./pages/MessageLogs";
+import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 
 // Initialize QueryClient for React Query
 const queryClient = new QueryClient({
@@ -31,14 +37,12 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/ai-generator" element={<AIGenerator />} />
           <Route path="/auth" element={<Auth />} />
-          
-          {/* These routes will be implemented later */}
-          <Route path="/sms-composer" element={<Dashboard />} />
-          <Route path="/contacts" element={<Dashboard />} />
-          <Route path="/scheduled" element={<Dashboard />} />
-          <Route path="/message-logs" element={<Dashboard />} />
-          <Route path="/analytics" element={<Dashboard />} />
-          <Route path="/settings" element={<Dashboard />} />
+          <Route path="/sms-composer" element={<SMSComposer />} />
+          <Route path="/contacts" element={<Contacts />} />
+          <Route path="/scheduled" element={<Scheduled />} />
+          <Route path="/message-logs" element={<MessageLogs />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/settings" element={<Settings />} />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />

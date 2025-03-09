@@ -1,169 +1,185 @@
 
-import Layout from "@/components/Layout";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import Layout from "@/components/Layout";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui-custom/Card";
+import { Button } from "@/components/ui-custom/Button";
+import { Badge } from "@/components/ui-custom/Badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Link } from "react-router-dom";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui-custom/Card";
-import { Badge } from "@/components/ui-custom/Badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import ContactsSearch, { Contact } from "@/components/Contacts/ContactsSearch";
+import MessageTemplate from "@/components/Messaging/MessageTemplate";
+import { useToast } from "@/hooks/use-toast";
+import { sendSms, scheduleMessage, MessageRecipient, MessageContent } from "@/utils/apiServices";
 import { 
-  MessageSquare, Users, Send, PencilLine, Clock, 
-  AlertCircle, HelpCircle, ArrowLeft, Check, ListPlus, FileText
+  MessageSquare, Calendar, Send, ArrowLeft, Plus, 
+  Copy, Clock, ImagePlus, BrainCircuit, UploadCloud
 } from "lucide-react";
-import { 
-  checkNumberOnWhatsApp, 
-  generateWhatsAppLink, 
-  canSendMoreMessages, 
-  smartDelay,
-  addRandomization 
-} from "@/utils/whatsappUtils";
-import { toast } from "@/components/ui/use-toast";
+
+// Sample templates
+const sampleTemplates = [
+  {
+    id: "t1",
+    title: "Appointment Reminder",
+    content: "Hi {name}, this is a reminder for your appointment tomorrow at 2:00 PM. Please arrive 10 minutes early. Reply CONFIRM to confirm or call us to reschedule.",
+    category: "reminder",
+    createdAt: "2023-05-15T10:30:00Z",
+    usageCount: 24
+  },
+  {
+    id: "t2",
+    title: "Product Launch",
+    content: "Exciting news! Our new product line launches next week. Be first to shop with 15% off using code FIRST15. Early access opens Monday at 9AM. Don't miss out!",
+    category: "marketing",
+    createdAt: "2023-06-01T14:45:00Z",
+    usageCount: 12,
+    model: "GPT-4"
+  },
+  {
+    id: "t3",
+    title: "Order Confirmation",
+    content: "Thank you for your order #{orderID}! Your items are being prepared for shipping. Track your delivery at example.com/track. Questions? Reply to this message.",
+    category: "notification",
+    createdAt: "2023-05-20T09:15:00Z",
+    usageCount: 87
+  }
+];
 
 const SMSComposer = () => {
   const [message, setMessage] = useState("");
-  const [recipients, setRecipients] = useState("");
-  const [activeTab, setActiveTab] = useState("compose");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<string>("compose");
+  const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [preferredChannel, setPreferredChannel] = useState("auto");
-  const [messageType, setMessageType] = useState("promotional");
-  const [recipientCount, setRecipientCount] = useState(0);
-  const [estimatedCost, setEstimatedCost] = useState("$0.00");
-  const [whatsappEligible, setWhatsappEligible] = useState(0);
-
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value);
+  const [enableScheduling, setEnableScheduling] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
+  const [characterCount, setCharacterCount] = useState(0);
+  const [mediaEnabled, setMediaEnabled] = useState(false);
+  const { toast } = useToast();
+  
+  const handleContactSelection = (contacts: Contact[]) => {
+    setSelectedContacts(contacts);
   };
-
-  const handleRecipientsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setRecipients(e.target.value);
-    
-    // Count recipients and update UI
-    const phoneNumbers = e.target.value
-      .split(/[,\n]/)
-      .map(num => num.trim())
-      .filter(num => num.length > 0);
-    
-    setRecipientCount(phoneNumbers.length);
-    
-    // Calculate estimated cost (example: $0.01 per SMS)
-    const cost = (phoneNumbers.length * 0.01).toFixed(2);
-    setEstimatedCost(`$${cost}`);
-    
-    // Analyze for WhatsApp eligibility
-    if (phoneNumbers.length > 0) {
-      setIsAnalyzing(true);
-      
-      // This would ideally be a batch operation for efficiency
-      Promise.all(phoneNumbers.map(number => checkNumberOnWhatsApp(number)))
-        .then(results => {
-          const eligibleCount = results.filter(result => result).length;
-          setWhatsappEligible(eligibleCount);
-          setIsAnalyzing(false);
-        })
-        .catch(error => {
-          console.error("Error checking WhatsApp eligibility:", error);
-          setIsAnalyzing(false);
-        });
-    } else {
-      setWhatsappEligible(0);
-    }
+  
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setMessage(text);
+    setCharacterCount(text.length);
   };
-
+  
+  const useTemplate = (id: string, content: string) => {
+    setMessage(content);
+    setCharacterCount(content.length);
+    
+    toast({
+      title: "Template Applied",
+      description: "Message template has been applied to composer",
+    });
+    
+    // Switch back to compose tab
+    setSelectedTab("compose");
+  };
+  
   const handleSendMessage = async () => {
-    if (!message.trim() || !recipients.trim()) {
+    // Validate
+    if (!message.trim()) {
       toast({
-        title: "Missing information",
-        description: "Please enter both a message and at least one recipient.",
-        variant: "destructive"
+        title: "Missing Message",
+        description: "Please enter a message to send",
+        variant: "destructive",
       });
       return;
     }
-
-    if (!canSendMoreMessages()) {
+    
+    if (selectedContacts.length === 0) {
       toast({
-        title: "Rate limit reached",
-        description: "You've reached the messaging limit. Please try again later.",
-        variant: "destructive"
+        title: "No Recipients",
+        description: "Please select at least one recipient",
+        variant: "destructive",
       });
       return;
     }
-
+    
+    // Format recipients
+    const recipients: MessageRecipient[] = selectedContacts.map((contact) => ({
+      phoneNumber: contact.phoneNumber,
+      name: contact.name
+    }));
+    
+    // Create message content
+    const content: MessageContent = {
+      body: message
+    };
+    
     setIsSending(true);
     
-    const phoneNumbers = recipients
-      .split(/[,\n]/)
-      .map(num => num.trim())
-      .filter(num => num.length > 0);
-    
-    let successCount = 0;
-    
-    // Process each number
-    for (const number of phoneNumbers) {
-      try {
-        // Check if number is on WhatsApp and user preference
-        const isOnWhatsApp = await checkNumberOnWhatsApp(number);
-        const useWhatsApp = (preferredChannel === "whatsapp" || 
-                           (preferredChannel === "auto" && isOnWhatsApp));
-        
-        if (useWhatsApp) {
-          // Send via WhatsApp
-          const randomizedMessage = addRandomization(message);
-          const whatsappLink = generateWhatsAppLink(number, randomizedMessage);
-          
-          // Open WhatsApp link in a new tab
-          window.open(whatsappLink, "_blank");
-          
-          // Update UI to show the message is being sent
+    try {
+      if (enableScheduling) {
+        // Validate schedule datetime
+        if (!scheduleDate || !scheduleTime) {
           toast({
-            title: "WhatsApp message ready",
-            description: `Message to ${number} ready to send. Please confirm in WhatsApp.`,
+            title: "Invalid Schedule",
+            description: "Please select both date and time for scheduling",
+            variant: "destructive",
           });
-          
-          successCount++;
-          
-          // Wait to prevent spam detection
-          await smartDelay(2000);
-        } else {
-          // This would be where an SMS API call would happen
-          // For now, we'll just simulate it
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          toast({
-            title: "SMS sent",
-            description: `Message sent to ${number} via SMS.`,
-          });
-          
-          successCount++;
+          setIsSending(false);
+          return;
         }
-      } catch (error) {
-        console.error(`Error sending to ${number}:`, error);
-        toast({
-          title: "Failed to send",
-          description: `Could not send message to ${number}.`,
-          variant: "destructive"
-        });
+        
+        const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
+        
+        if (scheduledDateTime <= new Date()) {
+          toast({
+            title: "Invalid Schedule",
+            description: "Scheduled time must be in the future",
+            variant: "destructive",
+          });
+          setIsSending(false);
+          return;
+        }
+        
+        // Schedule the message
+        const scheduleId = await scheduleMessage(recipients, content, scheduledDateTime);
+        
+        if (scheduleId) {
+          // Clear form after successful scheduling
+          setMessage("");
+          setSelectedContacts([]);
+          setEnableScheduling(false);
+          setScheduleDate("");
+          setScheduleTime("");
+        }
+      } else {
+        // Send immediately
+        const success = await sendSms(recipients, content);
+        
+        if (success) {
+          // Clear form after successful send
+          setMessage("");
+          setSelectedContacts([]);
+        }
       }
-    }
-    
-    setIsSending(false);
-    
-    // Final toast notification
-    if (successCount > 0) {
+    } catch (error) {
+      console.error("Error handling message:", error);
       toast({
-        title: "Messages processed",
-        description: `Successfully processed ${successCount} out of ${phoneNumbers.length} messages.`,
+        title: "Error",
+        description: "An error occurred while processing your request",
+        variant: "destructive",
       });
+    } finally {
+      setIsSending(false);
     }
   };
-
-  const characterCount = message.length;
-  const smsCount = Math.ceil(characterCount / 160) || 1;
-
+  
+  const getSmsCountEstimate = () => {
+    // Standard SMS segment is 160 characters
+    if (characterCount === 0) return 0;
+    return Math.ceil(characterCount / 160);
+  };
+  
   return (
     <Layout>
       <div className="space-y-8">
@@ -171,296 +187,224 @@ const SMSComposer = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
-                <a href="/dashboard">
+              <Link to="/dashboard">
+                <Button variant="ghost" size="sm" className="h-8 px-2">
                   <ArrowLeft size={16} />
-                </a>
-              </Button>
+                </Button>
+              </Link>
               <Badge variant="outline" size="sm">
                 <MessageSquare size={12} className="mr-1" />
-                Messaging
+                SMS
               </Badge>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">SMS Composer</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Message Composer</h1>
             <p className="text-muted-foreground">
-              Create and send messages to individuals or groups
+              Create and send SMS messages to your contacts
             </p>
           </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Composer Area */}
-          <div className="lg:col-span-2">
-            <Card variant="border">
-              <CardHeader>
-                <CardTitle>Message Composer</CardTitle>
-                <CardDescription>
-                  Craft your message and select recipients
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs
-                  defaultValue="compose"
-                  className="w-full"
-                  onValueChange={setActiveTab}
-                >
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="compose">
-                      <PencilLine size={16} className="mr-2" />
-                      Compose
-                    </TabsTrigger>
-                    <TabsTrigger value="recipients">
-                      <Users size={16} className="mr-2" />
-                      Recipients
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="compose" className="pt-4 space-y-4">
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="messageType">Message Type</Label>
-                          <Select
-                            value={messageType}
-                            onValueChange={setMessageType}
-                          >
-                            <SelectTrigger id="messageType">
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="promotional">Promotional</SelectItem>
-                              <SelectItem value="transactional">Transactional</SelectItem>
-                              <SelectItem value="reminder">Reminder</SelectItem>
-                              <SelectItem value="alert">Alert</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="channel">Preferred Channel</Label>
-                          <Select
-                            value={preferredChannel}
-                            onValueChange={setPreferredChannel}
-                          >
-                            <SelectTrigger id="channel">
-                              <SelectValue placeholder="Select channel" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="auto">
-                                Auto (SMS/WhatsApp)
-                              </SelectItem>
-                              <SelectItem value="sms">SMS Only</SelectItem>
-                              <SelectItem value="whatsapp">WhatsApp Only</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="message">Message Content</Label>
-                        <Textarea
-                          id="message"
-                          placeholder="Type your message here..."
-                          className="min-h-[150px] resize-y"
-                          value={message}
-                          onChange={handleTextChange}
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>
-                            {characterCount} characters 
-                            ({smsCount} SMS {smsCount > 1 ? "messages" : "message"})
-                          </span>
-                          <span>
-                            {160 - (characterCount % 160 || 160)} characters left in current SMS
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex space-x-4">
-                        <Button variant="outline" size="sm">
-                          <FileText size={14} className="mr-1" />
-                          Load Template
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <ListPlus size={14} className="mr-1" />
-                          Save as Template
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="recipients" className="pt-4 space-y-4">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="recipients">
-                          Phone Numbers 
-                          <span className="text-muted-foreground ml-2 text-xs">
-                            (one per line or comma-separated)
-                          </span>
-                        </Label>
-                        <Textarea
-                          id="recipients"
-                          placeholder="+1234567890, +0987654321"
-                          className="min-h-[150px] resize-y"
-                          value={recipients}
-                          onChange={handleRecipientsChange}
-                        />
-                      </div>
-                      
-                      <div className="flex space-x-4">
-                        <Button variant="outline" size="sm">
-                          <Users size={14} className="mr-1" />
-                          Select from Contacts
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <ListPlus size={14} className="mr-1" />
-                          Create Contact Group
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-                
-                <Separator className="my-6" />
-                
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                  <Button 
-                    className="w-full md:w-auto"
-                    onClick={handleSendMessage}
-                    disabled={isSending || !message.trim() || !recipients.trim()}
-                  >
-                    {isSending ? (
-                      <>Processing...</>
-                    ) : (
-                      <>
-                        <Send size={16} className="mr-2" />
-                        Send Message
-                      </>
-                    )}
-                  </Button>
-                  
-                  <Button variant="outline" className="w-full md:w-auto">
-                    <Clock size={16} className="mr-2" />
-                    Schedule for Later
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="flex items-center space-x-3">
+            <Link to="/ai-generator">
+              <Button variant="outline">
+                <BrainCircuit className="mr-2 h-4 w-4" />
+                Use AI Generator
+              </Button>
+            </Link>
           </div>
+        </div>
+        
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Left Column - Contact Selection */}
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="text-base">Recipients</CardTitle>
+              <CardDescription>
+                Select contacts to receive your message
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ContactsSearch 
+                onSelectContacts={handleContactSelection}
+                selectedContacts={selectedContacts}
+                maxHeight="400px"
+              />
+              
+              <div className="mt-4 text-sm text-muted-foreground">
+                <p>{selectedContacts.length} recipient{selectedContacts.length !== 1 ? 's' : ''} selected</p>
+              </div>
+            </CardContent>
+          </Card>
           
-          {/* Info Panel */}
-          <div className="space-y-6">
-            {/* Message Info */}
-            <Card variant="border">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Message Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+          {/* Right Column - Message Composer */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Message Tabs */}
+            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="compose">Compose Message</TabsTrigger>
+                <TabsTrigger value="templates">Templates</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="compose" className="space-y-4 pt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Compose Message</CardTitle>
+                    <CardDescription>
+                      Create your SMS message
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Textarea
+                      placeholder="Type your message here..."
+                      value={message}
+                      onChange={handleMessageChange}
+                      className="min-h-[150px] resize-none"
+                    />
+                    
+                    <div className="flex items-center justify-between text-sm">
+                      <div className={`${characterCount > 160 ? 'text-warning' : 'text-muted-foreground'}`}>
+                        {characterCount} character{characterCount !== 1 ? 's' : ''} 
+                        {characterCount > 0 && ` (${getSmsCountEstimate()} SMS segment${getSmsCountEstimate() !== 1 ? 's' : ''})`}
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Button variant="ghost" size="sm" disabled={message.length === 0} onClick={() => setMessage("")}>
+                          Clear
+                        </Button>
+                        <Button variant="ghost" size="sm" disabled={message.length === 0} onClick={() => {
+                          navigator.clipboard.writeText(message);
+                          toast({
+                            title: "Copied to clipboard",
+                            description: "Message copied to clipboard",
+                          });
+                        }}>
+                          <Copy size={14} className="mr-1" />
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="media-toggle"
+                          checked={mediaEnabled}
+                          onCheckedChange={setMediaEnabled}
+                        />
+                        <Label htmlFor="media-toggle">Add Media (MMS)</Label>
+                      </div>
+                      
+                      {mediaEnabled && (
+                        <Button variant="outline" className="w-full">
+                          <ImagePlus className="mr-2 h-4 w-4" />
+                          Upload Image
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="schedule-toggle"
+                          checked={enableScheduling}
+                          onCheckedChange={setEnableScheduling}
+                        />
+                        <Label htmlFor="schedule-toggle">Schedule Message</Label>
+                      </div>
+                      
+                      {enableScheduling && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-md">
+                          <div className="space-y-1">
+                            <Label htmlFor="scheduleDate" className="text-xs">Date</Label>
+                            <Input
+                              id="scheduleDate"
+                              type="date"
+                              value={scheduleDate}
+                              onChange={(e) => setScheduleDate(e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="scheduleTime" className="text-xs">Time</Label>
+                            <Input
+                              id="scheduleTime"
+                              type="time"
+                              value={scheduleTime}
+                              onChange={(e) => setScheduleTime(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-between border-t pt-4">
+                    <div className="text-sm text-muted-foreground flex items-center">
+                      <Clock className="h-4 w-4 mr-1" />
+                      {enableScheduling ? "Will be sent at scheduled time" : "Will be sent immediately"}
+                    </div>
+                    <Button
+                      onClick={handleSendMessage}
+                      loading={isSending}
+                      disabled={message.trim() === "" || selectedContacts.length === 0}
+                    >
+                      {!isSending && (
+                        enableScheduling ? (
+                          <>
+                            <Calendar className="mr-2 h-4 w-4" />
+                            Schedule
+                          </>
+                        ) : (
+                          <>
+                            <Send className="mr-2 h-4 w-4" />
+                            Send Now
+                          </>
+                        )
+                      )}
+                      {enableScheduling ? "Schedule Message" : "Send Message"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="templates" className="pt-4">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Recipients</p>
-                      <p className="font-medium">{recipientCount}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Message Length</p>
-                      <p className="font-medium">{characterCount} characters</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">SMS Count</p>
-                      <p className="font-medium">{smsCount} messages</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Estimated Cost</p>
-                      <p className="font-medium">{estimatedCost}</p>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-base font-medium">Saved Templates</h3>
+                    <Button size="sm">
+                      <Plus size={14} className="mr-1" />
+                      Create New Template
+                    </Button>
                   </div>
                   
-                  {recipientCount > 0 && (
-                    <div className="pt-2 border-t">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm">WhatsApp Eligible</p>
-                        {isAnalyzing ? (
-                          <Badge variant="outline">Analyzing...</Badge>
-                        ) : (
-                          <Badge variant="outline">
-                            {whatsappEligible} of {recipientCount}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        <div className="flex items-start">
-                          <Check size={14} className="text-green-500 mr-1 mt-0.5" />
-                          <p>
-                            Messages will be sent via WhatsApp when available (based on your channel preference)
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {sampleTemplates.map(template => (
+                      <MessageTemplate
+                        key={template.id}
+                        {...template}
+                        onUse={useTemplate}
+                        onEdit={(id) => {
+                          toast({
+                            title: "Edit Template",
+                            description: `Editing template: ${id}`,
+                          });
+                        }}
+                        onDelete={(id) => {
+                          toast({
+                            title: "Template Deleted",
+                            description: `Template has been deleted`,
+                          });
+                        }}
+                      />
+                    ))}
+                  </div>
+                  
+                  <div className="flex justify-center p-4 border border-dashed rounded-lg">
+                    <Button variant="outline">
+                      <UploadCloud className="mr-2 h-4 w-4" />
+                      Import Templates
+                    </Button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-            
-            {/* Tips */}
-            <Card variant="border">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center">
-                  <HelpCircle size={16} className="mr-2 text-primary" />
-                  Tips for Better Delivery
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <div className="space-y-3 text-xs text-muted-foreground">
-                  <p>
-                    <span className="font-medium text-foreground">Include country code: </span>
-                    Always include the country code (e.g., +1 for US).
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">Avoid spam triggers: </span>
-                    Words like "free", "urgent", and excessive punctuation.
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">Best time to send: </span>
-                    8am-1pm for business, 5pm-8pm for promotional content.
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">Keep it short: </span>
-                    Messages under 160 characters have better engagement.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Requirements */}
-            <Card variant="border">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center">
-                  <AlertCircle size={16} className="mr-2 text-warning" />
-                  Important Requirements
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <div className="space-y-3 text-xs text-muted-foreground">
-                  <p>
-                    <span className="font-medium text-foreground">Opt-out option: </span>
-                    Include STOP option for compliance with regulations.
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">Explicit consent: </span>
-                    Ensure all recipients have given consent to receive messages.
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">Manual WhatsApp sending: </span>
-                    WhatsApp messages require manual confirmation.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
