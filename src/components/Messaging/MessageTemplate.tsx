@@ -18,6 +18,7 @@ export type MessageTemplateProps = {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onUse?: (id: string, content: string) => void;
+  showActions?: boolean; // Add this property to fix the build error
 };
 
 const MessageTemplate = ({ 
@@ -30,7 +31,8 @@ const MessageTemplate = ({
   model,
   onEdit,
   onDelete,
-  onUse
+  onUse,
+  showActions = true // Default to true for backward compatibility
 }: MessageTemplateProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { toast } = useToast();
@@ -91,39 +93,61 @@ const MessageTemplate = ({
           )}
         </CardContent>
         <CardFooter className="flex justify-between pt-3 border-t">
-          <div className="flex gap-1">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={copyToClipboard}
-              className="h-8 px-2"
-            >
-              <Copy size={14} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit && onEdit(id)}
-              className="h-8 px-2"
-            >
-              <FileEdit size={14} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDeleteDialog(true)}
-              className="h-8 px-2 text-destructive"
-            >
-              <Trash2 size={14} />
-            </Button>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => onUse && onUse(id, content)}
-          >
-            <Send size={14} className="mr-1" />
-            Use
-          </Button>
+          {showActions ? (
+            <>
+              <div className="flex gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={copyToClipboard}
+                  className="h-8 px-2"
+                >
+                  <Copy size={14} />
+                </Button>
+                {onEdit && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(id)}
+                    className="h-8 px-2"
+                  >
+                    <FileEdit size={14} />
+                  </Button>
+                )}
+                {onDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="h-8 px-2 text-destructive"
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                )}
+              </div>
+              {onUse && (
+                <Button
+                  size="sm"
+                  onClick={() => onUse(id, content)}
+                >
+                  <Send size={14} className="mr-1" />
+                  Use
+                </Button>
+              )}
+            </>
+          ) : (
+            <div className="flex justify-end w-full">
+              {onUse && (
+                <Button
+                  size="sm"
+                  onClick={() => onUse(id, content)}
+                >
+                  <Send size={14} className="mr-1" />
+                  Use
+                </Button>
+              )}
+            </div>
+          )}
         </CardFooter>
       </Card>
       
