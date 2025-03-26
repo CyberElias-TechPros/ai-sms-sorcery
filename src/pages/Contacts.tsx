@@ -1,373 +1,566 @@
 
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui-custom/Card";
+import { Button } from "@/components/ui-custom/Button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui-custom/Card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui-custom/Badge";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { 
-  Users, UserPlus, ArrowLeft, Search, Filter, UserCircle,
-  MoreVertical, Plus, Upload, Download, Tags, Phone, Mail
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { checkNumberOnWhatsApp } from "@/utils/whatsappUtils";
+import { Contact } from "@/components/Contacts/ContactsSearch";
+import { useContactsStore } from "@/store/contactsStore";
+import { 
+  Search, Plus, Edit, Trash2, UserPlus, X, Tag, Users, ArrowUpDown, Download, Upload, MoreHorizontal, 
+  User, Phone, Mail, UsersRound, Check, Loader2
+} from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// Sample contacts data
-const sampleContacts = [
-  { id: 1, name: "John Doe", phone: "+1234567890", email: "john@example.com", group: "Customers", whatsapp: true },
-  { id: 2, name: "Jane Smith", phone: "+2345678901", email: "jane@example.com", group: "Leads", whatsapp: true },
-  { id: 3, name: "Robert Johnson", phone: "+3456789012", email: "robert@example.com", group: "Vendors", whatsapp: false },
-  { id: 4, name: "Emily Davis", phone: "+4567890123", email: "emily@example.com", group: "Customers", whatsapp: true },
-  { id: 5, name: "Michael Wilson", phone: "+5678901234", email: "michael@example.com", group: "Subscribers", whatsapp: false },
-  { id: 6, name: "Sarah Brown", phone: "+6789012345", email: "sarah@example.com", group: "Leads", whatsapp: true },
-  { id: 7, name: "David Miller", phone: "+7890123456", email: "david@example.com", group: "Customers", whatsapp: true },
-  { id: 8, name: "Jessica Taylor", phone: "+8901234567", email: "jessica@example.com", group: "Subscribers", whatsapp: false },
-  { id: 9, name: "Thomas Anderson", phone: "+9012345678", email: "thomas@example.com", group: "Vendors", whatsapp: true },
-  { id: 10, name: "Jennifer Martin", phone: "+0123456789", email: "jennifer@example.com", group: "Customers", whatsapp: true },
-];
+// Available contact groups
+const contactGroups = ["Friends", "Family", "Work", "Clients", "Subscribers"];
 
-// Sample groups data
-const sampleGroups = [
-  { id: 1, name: "Customers", count: 4 },
-  { id: 2, name: "Leads", count: 2 },
-  { id: 3, name: "Vendors", count: 2 },
-  { id: 4, name: "Subscribers", count: 2 },
-];
+// Available contact tags
+const contactTags = ["VIP", "Personal", "Business", "Team", "Marketing", "Support", "Inactive"];
 
 const Contacts = () => {
-  const [contacts, setContacts] = useState(sampleContacts);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
-  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentContact, setCurrentContact] = useState<Contact | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Filter contacts based on search query and active group
-  const filteredContacts = contacts.filter(contact => {
-    const matchesSearch = 
-      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.phone.includes(searchQuery) ||
-      contact.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesGroup = activeGroup ? contact.group === activeGroup : true;
-    
-    return matchesSearch && matchesGroup;
+  const { 
+    contacts, 
+    addContact, 
+    updateContact, 
+    deleteContact, 
+    searchContacts, 
+    getContactsByGroup, 
+    getContactsByTag 
+  } = useContactsStore();
+  
+  const [filteredContacts, setFilteredContacts] = useState<Contact[]>(contacts);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: "",
+    phoneNumber: "",
+    email: "",
+    group: "",
   });
   
-  const handleSelectContact = (contactId: number) => {
-    setSelectedContacts(prev => 
-      prev.includes(contactId) 
-        ? prev.filter(id => id !== contactId) 
-        : [...prev, contactId]
-    );
-  };
-  
-  const handleSelectAll = () => {
-    if (selectedContacts.length === filteredContacts.length) {
-      setSelectedContacts([]);
-    } else {
-      setSelectedContacts(filteredContacts.map(contact => contact.id));
-    }
-  };
-  
-  const handleGroupClick = (groupName: string) => {
-    setActiveGroup(activeGroup === groupName ? null : groupName);
-  };
-  
-  const checkWhatsAppStatus = async (contactId: number) => {
-    const contact = contacts.find(c => c.id === contactId);
-    if (!contact) return;
+  useEffect(() => {
+    let result = contacts;
     
-    try {
-      const isOnWhatsApp = await checkNumberOnWhatsApp(contact.phone);
-      
-      setContacts(prev => prev.map(c => 
-        c.id === contactId ? { ...c, whatsapp: isOnWhatsApp } : c
-      ));
-    } catch (error) {
-      console.error("Error checking WhatsApp status:", error);
+    // Apply filters
+    if (searchQuery) {
+      result = searchContacts(searchQuery);
+    }
+    
+    if (selectedGroup) {
+      result = result.filter(contact => contact.group === selectedGroup);
+    }
+    
+    if (selectedTag) {
+      result = result.filter(
+        contact => contact.tags && contact.tags.includes(selectedTag)
+      );
+    }
+    
+    setFilteredContacts(result);
+  }, [contacts, searchQuery, selectedGroup, selectedTag, searchContacts]);
+  
+  const openAddContactDialog = () => {
+    setIsEditMode(false);
+    setCurrentContact(null);
+    setFormData({
+      name: "",
+      phoneNumber: "",
+      email: "",
+      group: "",
+    });
+    setSelectedTags([]);
+    setContactDialogOpen(true);
+  };
+  
+  const openEditContactDialog = (contact: Contact) => {
+    setIsEditMode(true);
+    setCurrentContact(contact);
+    setFormData({
+      name: contact.name,
+      phoneNumber: contact.phoneNumber,
+      email: contact.email || "",
+      group: contact.group || "",
+    });
+    setSelectedTags(contact.tags || []);
+    setContactDialogOpen(true);
+  };
+  
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+  
+  const handleAddTag = () => {
+    if (newTag && !selectedTags.includes(newTag)) {
+      setSelectedTags(prev => [...prev, newTag]);
+      setNewTag("");
     }
   };
-
+  
+  const removeTag = (tag: string) => {
+    setSelectedTags(prev => prev.filter(t => t !== tag));
+  };
+  
+  const handleSaveContact = () => {
+    if (!formData.name || !formData.phoneNumber) {
+      toast.error("Name and phone number are required");
+      return;
+    }
+    
+    // Phone validation
+    const phoneRegex = /^\+\d{10,15}$/;
+    if (!phoneRegex.test(formData.phoneNumber)) {
+      toast.error("Phone number must be in international format (e.g., +12025550142)");
+      return;
+    }
+    
+    // Email validation (if provided)
+    if (formData.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        toast.error("Please enter a valid email address");
+        return;
+      }
+    }
+    
+    setIsLoading(true);
+    
+    setTimeout(() => {
+      try {
+        if (isEditMode && currentContact) {
+          // Update existing contact
+          updateContact(currentContact.id, {
+            ...formData,
+            tags: selectedTags,
+          });
+          toast.success("Contact updated successfully");
+        } else {
+          // Create new contact
+          addContact({
+            ...formData,
+            tags: selectedTags,
+          });
+          toast.success("Contact added successfully");
+        }
+        
+        setContactDialogOpen(false);
+      } catch (error) {
+        console.error("Error saving contact:", error);
+        toast.error("Failed to save contact");
+      } finally {
+        setIsLoading(false);
+      }
+    }, 500); // Simulating API delay
+  };
+  
+  const handleDeleteContact = (id: string) => {
+    if (confirm("Are you sure you want to delete this contact?")) {
+      deleteContact(id);
+      toast.success("Contact deleted successfully");
+    }
+  };
+  
+  const exportContacts = () => {
+    try {
+      const dataString = JSON.stringify(contacts, null, 2);
+      const blob = new Blob([dataString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `contacts_export_${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Contacts exported successfully");
+    } catch (error) {
+      console.error("Error exporting contacts:", error);
+      toast.error("Failed to export contacts");
+    }
+  };
+  
+  const importContacts = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const result = event.target?.result;
+        if (typeof result === "string") {
+          const importedContacts = JSON.parse(result);
+          
+          if (Array.isArray(importedContacts)) {
+            // In a real app, we would validate each contact and handle duplicates
+            importedContacts.forEach(contact => {
+              if (contact.name && contact.phoneNumber) {
+                addContact(contact);
+              }
+            });
+            
+            toast.success(`Imported ${importedContacts.length} contacts`);
+          } else {
+            toast.error("Invalid import format");
+          }
+        }
+      } catch (error) {
+        console.error("Error importing contacts:", error);
+        toast.error("Failed to import contacts");
+      }
+    };
+    
+    reader.readAsText(file);
+  };
+  
   return (
     <Layout>
-      <div className="space-y-8">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
-                <a href="/dashboard">
-                  <ArrowLeft size={16} />
-                </a>
-              </Button>
-              <Badge variant="outline" size="sm">
-                <Users size={12} className="mr-1" />
-                Directory
-              </Badge>
-            </div>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+          <div>
             <h1 className="text-2xl font-bold tracking-tight">Contacts</h1>
             <p className="text-muted-foreground">
-              Manage your contacts and organize them into groups
+              Manage your contacts for SMS campaigns
             </p>
           </div>
           
-          <div className="flex items-center space-x-3">
-            <Button variant="outline" size="sm">
-              <Upload size={14} className="mr-1.5" />
-              Import
-            </Button>
-            <Button variant="outline" size="sm">
-              <Download size={14} className="mr-1.5" />
-              Export
-            </Button>
-            <Button size="sm">
-              <UserPlus size={14} className="mr-1.5" />
+          <div className="flex items-center gap-2">
+            <Button onClick={openAddContactDialog}>
+              <UserPlus className="h-4 w-4 mr-2" />
               Add Contact
             </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportContacts}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Contacts
+                </DropdownMenuItem>
+                <Label htmlFor="import-contacts" className="cursor-pointer">
+                  <DropdownMenuItem onClick={(e) => e.preventDefault()}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Contacts
+                  </DropdownMenuItem>
+                </Label>
+                <Input 
+                  id="import-contacts" 
+                  type="file" 
+                  accept=".json" 
+                  className="hidden" 
+                  onChange={importContacts}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         
-        {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Groups Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Groups Card */}
-            <Card variant="border">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium">Groups</CardTitle>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Plus size={14} />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <ScrollArea className="h-[300px] pr-4">
-                  <div className="space-y-1">
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start font-normal text-muted-foreground hover:text-foreground"
-                      onClick={() => setActiveGroup(null)}
+          {/* Left Sidebar - Filters */}
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle>Filters</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search contacts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Filter by Group</Label>
+                <ScrollArea className="h-36 border rounded-md">
+                  <div className="p-2 space-y-1">
+                    <div 
+                      className={`flex items-center p-2 rounded-md cursor-pointer hover:bg-muted/50 ${selectedGroup === null ? "bg-primary/10" : ""}`}
+                      onClick={() => setSelectedGroup(null)}
                     >
-                      <Users size={16} className="mr-2" />
-                      <span>All Contacts</span>
-                      <Badge variant="outline" className="ml-auto h-5 px-1.5">
-                        {contacts.length}
-                      </Badge>
-                    </Button>
-                    
-                    {sampleGroups.map(group => (
-                      <Button 
-                        key={group.id}
-                        variant={activeGroup === group.name ? "secondary" : "ghost"}
-                        className="w-full justify-start font-normal"
-                        onClick={() => handleGroupClick(group.name)}
+                      <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>All Groups</span>
+                      {selectedGroup === null && <Check className="h-4 w-4 ml-auto text-primary" />}
+                    </div>
+                    {contactGroups.map(group => (
+                      <div 
+                        key={group} 
+                        className={`flex items-center p-2 rounded-md cursor-pointer hover:bg-muted/50 ${selectedGroup === group ? "bg-primary/10" : ""}`}
+                        onClick={() => setSelectedGroup(group)}
                       >
-                        <Tags size={16} className="mr-2" />
-                        <span>{group.name}</span>
-                        <Badge variant="outline" className="ml-auto h-5 px-1.5">
-                          {group.count}
-                        </Badge>
-                      </Button>
+                        <UsersRound className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{group}</span>
+                        {selectedGroup === group && <Check className="h-4 w-4 ml-auto text-primary" />}
+                      </div>
                     ))}
                   </div>
                 </ScrollArea>
-              </CardContent>
-            </Card>
-            
-            {/* Quick Actions */}
-            <Card variant="border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <div className="space-y-2">
-                  <Button variant="outline" size="sm" className="w-full justify-start text-xs font-normal">
-                    <UserPlus size={14} className="mr-2" />
-                    Create New Contact
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start text-xs font-normal">
-                    <Tags size={14} className="mr-2" />
-                    Create New Group  
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start text-xs font-normal">
-                    <Upload size={14} className="mr-2" />
-                    Import from CSV
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start text-xs font-normal">
-                    <Phone size={14} className="mr-2" />
-                    Verify WhatsApp Status
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Contacts Table */}
-          <div className="lg:col-span-3">
-            <Card variant="border">
-              <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-                  <CardTitle className="text-sm font-medium">
-                    {activeGroup ? `${activeGroup} Contacts` : "All Contacts"}
-                  </CardTitle>
-                  
-                  <div className="flex items-center space-x-2">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="search"
-                        placeholder="Search contacts..."
-                        className="pl-8 h-9 w-[180px] sm:w-[250px]"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
-                    
-                    <Button variant="outline" size="sm" className="h-9 px-2 sm:px-3">
-                      <Filter size={16} className="sm:mr-2" />
-                      <span className="hidden sm:inline">Filter</span>
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
+              </div>
               
-              <CardContent>
-                {filteredContacts.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <UserCircle size={48} className="text-muted-foreground/30 mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No contacts found</h3>
-                    <p className="text-muted-foreground mb-6 max-w-md">
-                      {searchQuery 
-                        ? `No contacts matching "${searchQuery}"`
-                        : "You don't have any contacts yet. Add your first contact to get started."}
-                    </p>
-                    <Button>
-                      <UserPlus size={16} className="mr-2" />
-                      Add New Contact
-                    </Button>
+              <div className="space-y-2">
+                <Label>Filter by Tag</Label>
+                <ScrollArea className="h-36 border rounded-md">
+                  <div className="p-2 space-y-1">
+                    <div 
+                      className={`flex items-center p-2 rounded-md cursor-pointer hover:bg-muted/50 ${selectedTag === null ? "bg-primary/10" : ""}`}
+                      onClick={() => setSelectedTag(null)}
+                    >
+                      <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>All Tags</span>
+                      {selectedTag === null && <Check className="h-4 w-4 ml-auto text-primary" />}
+                    </div>
+                    {contactTags.map(tag => (
+                      <div 
+                        key={tag} 
+                        className={`flex items-center p-2 rounded-md cursor-pointer hover:bg-muted/50 ${selectedTag === tag ? "bg-primary/10" : ""}`}
+                        onClick={() => setSelectedTag(tag)}
+                      >
+                        <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{tag}</span>
+                        {selectedTag === tag && <Check className="h-4 w-4 ml-auto text-primary" />}
+                      </div>
+                    ))}
                   </div>
-                ) : (
-                  <div className="rounded-md border">
-                    <div className="relative overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="px-4 py-3 text-left font-medium">
-                              <div className="flex items-center">
-                                <Checkbox 
-                                  checked={selectedContacts.length > 0 && selectedContacts.length === filteredContacts.length}
-                                  onCheckedChange={handleSelectAll}
-                                  aria-label="Select all contacts"
-                                />
-                              </div>
-                            </th>
-                            <th className="px-4 py-3 text-left font-medium">Name</th>
-                            <th className="px-4 py-3 text-left font-medium">Phone</th>
-                            <th className="px-4 py-3 text-left font-medium hidden md:table-cell">Email</th>
-                            <th className="px-4 py-3 text-left font-medium hidden md:table-cell">Group</th>
-                            <th className="px-4 py-3 text-left font-medium">WhatsApp</th>
-                            <th className="px-4 py-3 text-right font-medium"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredContacts.map((contact) => (
-                            <tr key={contact.id} className="border-b hover:bg-muted/50">
-                              <td className="px-4 py-3">
-                                <Checkbox 
-                                  checked={selectedContacts.includes(contact.id)}
-                                  onCheckedChange={() => handleSelectContact(contact.id)}
-                                  aria-label={`Select ${contact.name}`}
-                                />
-                              </td>
-                              <td className="px-4 py-3 font-medium">
-                                {contact.name}
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground">
-                                {contact.phone}
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                                {contact.email}
-                              </td>
-                              <td className="px-4 py-3 hidden md:table-cell">
-                                <Badge variant="outline" size="sm">
-                                  {contact.group}
-                                </Badge>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div 
-                                  className={`w-6 h-6 rounded-full flex items-center justify-center
-                                    ${contact.whatsapp 
-                                      ? 'bg-green-500/10 text-green-500'
-                                      : 'bg-muted text-muted-foreground'}
-                                  `}
-                                  onClick={() => checkWhatsAppStatus(contact.id)}
-                                  title={contact.whatsapp ? "Available on WhatsApp" : "Not on WhatsApp"}
-                                >
-                                  <Phone size={14} />
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreVertical size={16} />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem>View Details</DropdownMenuItem>
-                                    <DropdownMenuItem>Edit Contact</DropdownMenuItem>
-                                    <DropdownMenuItem>Send Message</DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="text-destructive">
-                                      Delete Contact
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
-                            </tr>
+                </ScrollArea>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Right Content Area - Contact List */}
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>{filteredContacts.length} Contacts</span>
+                <Button variant="ghost" size="sm">
+                  <ArrowUpDown className="h-4 w-4 mr-1" />
+                  Sort by Name
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filteredContacts.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                    <User className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-1">No contacts found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {searchQuery || selectedGroup || selectedTag
+                      ? "Try adjusting your filters"
+                      : "Start by adding your first contact"}
+                  </p>
+                  <Button onClick={openAddContactDialog}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Contact
+                  </Button>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {filteredContacts.map((contact) => (
+                    <div key={contact.id} className="py-4 flex justify-between">
+                      <div className="space-y-1">
+                        <div className="font-medium">{contact.name}</div>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Phone className="h-3.5 w-3.5 mr-1" />
+                          {contact.phoneNumber}
+                        </div>
+                        {contact.email && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Mail className="h-3.5 w-3.5 mr-1" />
+                            {contact.email}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {contact.group && (
+                            <Badge variant="outline" size="sm" className="bg-muted/50">
+                              <Users className="h-3 w-3 mr-1" />
+                              {contact.group}
+                            </Badge>
+                          )}
+                          {contact.tags?.map(tag => (
+                            <Badge key={tag} variant="secondary" size="sm">
+                              <Tag className="h-3 w-3 mr-1" />
+                              {tag}
+                            </Badge>
                           ))}
-                        </tbody>
-                      </table>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="ghost" size="icon" onClick={() => openEditContactDialog(contact)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteContact(contact.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                )}
-                
-                {selectedContacts.length > 0 && (
-                  <div className="flex items-center justify-between mt-4 bg-muted/50 p-2 rounded-md">
-                    <div className="text-sm font-medium">
-                      {selectedContacts.length} contacts selected
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Tags size={14} className="mr-1.5" />
-                        Add to Group
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Mail size={14} className="mr-1.5" />
-                        Send Message
-                      </Button>
-                      <Button variant="destructive" size="sm">
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
+        
+        {/* Contact Add/Edit Dialog */}
+        <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{isEditMode ? "Edit Contact" : "Add New Contact"}</DialogTitle>
+              <DialogDescription>
+                {isEditMode 
+                  ? "Update the contact details" 
+                  : "Fill in the contact details to add a new contact"}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  placeholder="John Doe"
+                  value={formData.name}
+                  onChange={(e) => handleFormChange("name", e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  placeholder="+12025550142"
+                  value={formData.phoneNumber}
+                  onChange={(e) => handleFormChange("phoneNumber", e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter number in international format (e.g., +12025550142)
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email (Optional)</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={formData.email}
+                  onChange={(e) => handleFormChange("email", e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="group">Group</Label>
+                <Select 
+                  value={formData.group} 
+                  onValueChange={(value) => handleFormChange("group", value)}
+                >
+                  <SelectTrigger id="group">
+                    <SelectValue placeholder="Select a group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contactGroups.map(group => (
+                      <SelectItem key={group} value={group}>{group}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="flex flex-wrap gap-2 border rounded-md p-2 min-h-[42px]">
+                  {selectedTags.map(tag => (
+                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                      {tag}
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-4 w-4 p-0 hover:bg-transparent" 
+                        onClick={() => removeTag(tag)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
+                
+                <div className="flex items-center gap-2 mt-2">
+                  <Select 
+                    value={newTag} 
+                    onValueChange={setNewTag}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a tag" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contactTags
+                        .filter(tag => !selectedTags.includes(tag))
+                        .map(tag => (
+                          <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                        ))
+                      }
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={handleAddTag}
+                    disabled={!newTag}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setContactDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveContact}
+                disabled={isLoading || !formData.name || !formData.phoneNumber}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  isEditMode ? "Update Contact" : "Add Contact"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
