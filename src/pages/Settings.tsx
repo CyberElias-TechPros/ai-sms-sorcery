@@ -1,548 +1,395 @@
 
-import { useState } from "react";
-import Layout from "@/components/Layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui-custom/Card";
-import { Button } from "@/components/ui-custom/Button";
-import { Badge } from "@/components/ui-custom/Badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { useState } from 'react';
+import Layout from '@/components/Layout';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui-custom/Card';
+import { Button } from '@/components/ui-custom/Button';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui-custom/Badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Link } from 'react-router-dom';
 import { 
-  User, Shield, Bell, Key, KeyRound, Smartphone, 
-  CreditCard, MessageSquare, BrainCircuit, Globe, CloudCog,
-  Save, ArrowLeft
-} from "lucide-react";
-import { Link } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
+  UserIcon, KeySquare, AlertTriangle, ArrowRight, Bell, 
+  Clock, Smartphone, Database, ShieldCheck, Trash2, 
+  LogOut, Download, BookCopy, MessageCircle
+} from 'lucide-react';
+import { useAuth } from '@/providers/AuthProvider';
+import { toast } from 'sonner';
 
 const Settings = () => {
-  // User profile state
-  const [firstName, setFirstName] = useState("John");
-  const [lastName, setLastName] = useState("Doe");
-  const [email, setEmail] = useState("john.doe@example.com");
-  const [phone, setPhone] = useState("+1234567890");
+  const { user, logout } = useAuth();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   
-  // Notification settings
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [smsNotifications, setSmsNotifications] = useState(false);
-  const [weeklyReports, setWeeklyReports] = useState(true);
-  const [deliveryReceipts, setDeliveryReceipts] = useState(true);
-  
-  // API settings
-  const [currentApiProvider, setCurrentApiProvider] = useState("twilio");
-  const [aiProvider, setAiProvider] = useState("openai");
-  
-  // Security settings
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  
-  const saveSettings = () => {
-    toast({
-      title: "Settings Saved",
-      description: "Your settings have been updated successfully.",
-    });
+  const handleDeleteAccount = () => {
+    // In a real app, this would show a confirmation dialog and call an API
+    toast.error("This feature is not implemented in the demo version.");
   };
-  
+
   return (
     <Layout>
-      <div className="space-y-8">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2">
-              <Link to="/dashboard">
-                <Button variant="ghost" size="sm" className="h-8 px-2">
-                  <ArrowLeft size={16} />
-                </Button>
-              </Link>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-            <p className="text-muted-foreground">
-              Manage your account settings and preferences
-            </p>
-          </div>
-          <Button onClick={saveSettings}>
-            <Save className="mr-2 h-4 w-4" />
-            Save Changes
-          </Button>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your account settings and preferences
+          </p>
         </div>
-        
-        {/* Settings Tabs */}
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            <TabsTrigger value="profile" className="flex items-center gap-1">
-              <User size={14} />
-              <span className="hidden md:inline">Profile</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center gap-1">
-              <Bell size={14} />
-              <span className="hidden md:inline">Notifications</span>
-            </TabsTrigger>
-            <TabsTrigger value="api" className="flex items-center gap-1">
-              <Key size={14} />
-              <span className="hidden md:inline">API</span>
-            </TabsTrigger>
-            <TabsTrigger value="security" className="flex items-center gap-1">
-              <Shield size={14} />
-              <span className="hidden md:inline">Security</span>
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="flex items-center gap-1">
-              <CreditCard size={14} />
-              <span className="hidden md:inline">Billing</span>
-            </TabsTrigger>
+
+        <Separator className="my-6" />
+
+        <Tabs defaultValue="general">
+          <TabsList className="mb-6">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="data">Data & Privacy</TabsTrigger>
           </TabsList>
           
-          {/* Profile Tab */}
-          <TabsContent value="profile">
+          {/* General Settings */}
+          <TabsContent value="general" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>
-                  Update your personal details and contact information
-                </CardDescription>
+                <CardTitle>Notifications</CardTitle>
+                <CardDescription>Configure how you receive notifications</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input 
-                      id="firstName" 
-                      value={firstName} 
-                      onChange={(e) => setFirstName(e.target.value)} 
-                    />
+                <div className="flex items-center justify-between space-x-2">
+                  <div>
+                    <Label htmlFor="email-notifications" className="font-medium">Email Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Receive email notifications for important events</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input 
-                      id="lastName" 
-                      value={lastName} 
-                      onChange={(e) => setLastName(e.target.value)} 
-                    />
-                  </div>
+                  <Switch 
+                    id="email-notifications" 
+                    checked={notificationsEnabled} 
+                    onCheckedChange={setNotificationsEnabled} 
+                  />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
-                    />
+                <div className="flex items-center justify-between space-x-2">
+                  <div>
+                    <Label htmlFor="sms-notifications" className="font-medium">SMS Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Receive text messages for critical alerts</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input 
-                      id="phone" 
-                      type="tel" 
-                      value={phone} 
-                      onChange={(e) => setPhone(e.target.value)} 
-                    />
-                  </div>
+                  <Switch id="sms-notifications" />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <select 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    defaultValue="America/New_York"
-                  >
-                    <option value="America/New_York">Eastern Time (US & Canada)</option>
-                    <option value="America/Chicago">Central Time (US & Canada)</option>
-                    <option value="America/Denver">Mountain Time (US & Canada)</option>
-                    <option value="America/Los_Angeles">Pacific Time (US & Canada)</option>
-                    <option value="Europe/London">London</option>
-                    <option value="Europe/Paris">Paris</option>
-                    <option value="Asia/Tokyo">Tokyo</option>
-                  </select>
+                <div className="flex items-center justify-between space-x-2">
+                  <div>
+                    <Label htmlFor="browser-notifications" className="font-medium">Browser Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Show desktop notifications in your browser</p>
+                  </div>
+                  <Switch 
+                    id="browser-notifications" 
+                    checked={true} 
+                    disabled 
+                  />
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-          
-          {/* Notifications Tab */}
-          <TabsContent value="notifications">
+            
             <Card>
               <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>
-                  Control how and when you receive notifications
-                </CardDescription>
+                <CardTitle>Appearance</CardTitle>
+                <CardDescription>Customize the look and feel of the application</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">Email Notifications</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive updates about your account via email
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={emailNotifications} 
-                      onCheckedChange={setEmailNotifications} 
-                    />
+                <div className="flex items-center justify-between space-x-2">
+                  <div>
+                    <Label htmlFor="dark-mode" className="font-medium">Dark Mode</Label>
+                    <p className="text-sm text-muted-foreground">Switch between light and dark theme</p>
                   </div>
-                  
-                  <Separator />
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">SMS Notifications</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive important alerts via SMS
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={smsNotifications} 
-                      onCheckedChange={setSmsNotifications} 
-                    />
+                  <Switch 
+                    id="dark-mode" 
+                    checked={darkModeEnabled} 
+                    onCheckedChange={setDarkModeEnabled} 
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between space-x-2">
+                  <div>
+                    <Label htmlFor="compact-view" className="font-medium">Compact View</Label>
+                    <p className="text-sm text-muted-foreground">Reduce spacing in lists and tables</p>
                   </div>
-                  
-                  <Separator />
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">Weekly Report</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Get a weekly summary of your messaging activity
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={weeklyReports} 
-                      onCheckedChange={setWeeklyReports} 
-                    />
+                  <Switch id="compact-view" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Behavior</CardTitle>
+                <CardDescription>Configure how the application behaves</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between space-x-2">
+                  <div>
+                    <Label htmlFor="auto-save" className="font-medium">Auto Save</Label>
+                    <p className="text-sm text-muted-foreground">Automatically save drafts while typing</p>
                   </div>
-                  
-                  <Separator />
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">Delivery Receipts</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive notifications when messages are delivered
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={deliveryReceipts} 
-                      onCheckedChange={setDeliveryReceipts} 
-                    />
+                  <Switch 
+                    id="auto-save" 
+                    checked={autoSaveEnabled} 
+                    onCheckedChange={setAutoSaveEnabled} 
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between space-x-2">
+                  <div>
+                    <Label htmlFor="session-timeout" className="font-medium">Session Timeout</Label>
+                    <p className="text-sm text-muted-foreground">Automatically log out after inactivity</p>
+                  </div>
+                  <div className="flex items-center">
+                    <Badge variant="outline">30 minutes</Badge>
+                    <Button variant="ghost" size="sm" className="ml-2">
+                      <Clock className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
           
-          {/* API Tab */}
-          <TabsContent value="api">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <MessageSquare className="mr-2 h-5 w-5 text-primary" />
-                    SMS API Integration
-                  </CardTitle>
-                  <CardDescription>
-                    Connect your SMS API provider
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Current Provider</Label>
-                    <select 
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={currentApiProvider}
-                      onChange={(e) => setCurrentApiProvider(e.target.value)}
-                    >
-                      <option value="twilio">Twilio</option>
-                      <option value="termii">Termii</option>
-                      <option value="infobip">Infobip</option>
-                      <option value="vonage">Vonage</option>
-                    </select>
+          {/* Account Settings */}
+          <TabsContent value="account" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Account Information</CardTitle>
+                <CardDescription>Manage your personal account details</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between items-center py-2">
+                  <div>
+                    <div className="font-medium">Profile Settings</div>
+                    <div className="text-sm text-muted-foreground">Update your personal information</div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="apiKey">API Key</Label>
-                    <Input 
-                      id="apiKey" 
-                      type="password" 
-                      placeholder="Enter your API key" 
-                    />
+                  <Link to="/profile-settings">
+                    <Button variant="outline" size="sm">
+                      <UserIcon className="h-4 w-4 mr-2" />
+                      Manage
+                    </Button>
+                  </Link>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between items-center py-2">
+                  <div>
+                    <div className="font-medium">API Configuration</div>
+                    <div className="text-sm text-muted-foreground">Set up your SMS and AI API keys</div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="apiSecret">API Secret</Label>
-                    <Input 
-                      id="apiSecret" 
-                      type="password" 
-                      placeholder="Enter your API secret" 
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="senderID">Sender ID</Label>
-                    <Input 
-                      id="senderID" 
-                      placeholder="Your sender ID" 
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      The name or number that recipients will see
-                    </p>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => toast({
-                      title: "Testing Connection",
-                      description: "Testing connection to SMS API...",
-                    })}
-                  >
-                    Test Connection
-                  </Button>
-                </CardFooter>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <BrainCircuit className="mr-2 h-5 w-5 text-primary" />
-                    AI API Integration
-                  </CardTitle>
-                  <CardDescription>
-                    Connect your AI model provider
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>AI Provider</Label>
-                    <select 
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={aiProvider}
-                      onChange={(e) => setAiProvider(e.target.value)}
-                    >
-                      <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
-                      <option value="anthropic">Anthropic (Claude)</option>
-                      <option value="google">Google (Gemini)</option>
-                    </select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="aiApiKey">API Key</Label>
-                    <Input 
-                      id="aiApiKey" 
-                      type="password" 
-                      placeholder="Enter your AI API key" 
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Default Model</Label>
-                    <select 
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      defaultValue="gpt-4"
-                    >
-                      <option value="gpt-4">GPT-4</option>
-                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                      <option value="claude-3-opus">Claude 3 Opus</option>
-                      <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                      <option value="gemini-pro">Gemini Pro</option>
-                    </select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Model Parameters</Label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="temperature" className="text-xs">Temperature</Label>
-                        <Input 
-                          id="temperature" 
-                          type="number" 
-                          placeholder="0.7" 
-                          min="0" 
-                          max="2" 
-                          step="0.1" 
-                          defaultValue="0.7"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="maxTokens" className="text-xs">Max Tokens</Label>
-                        <Input 
-                          id="maxTokens" 
-                          type="number" 
-                          placeholder="150" 
-                          min="1" 
-                          defaultValue="150"
-                        />
-                      </div>
+                  <Link to="/api-settings">
+                    <Button variant="outline" size="sm">
+                      <KeySquare className="h-4 w-4 mr-2" />
+                      Configure
+                    </Button>
+                  </Link>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between items-center py-2">
+                  <div>
+                    <div className="font-medium">Subscription Plan</div>
+                    <div className="text-sm text-muted-foreground">
+                      <Badge variant="outline" className="bg-primary/5 text-primary">Free Trial</Badge>
+                      <span className="ml-2">500 SMS messages remaining</span>
                     </div>
                   </div>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => toast({
-                      title: "Testing AI Connection",
-                      description: "Testing connection to AI API...",
-                    })}
-                  >
-                    Test AI Connection
+                  <Button size="sm">
+                    Upgrade
+                    <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
-                </CardFooter>
-              </Card>
-            </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between items-center py-2">
+                  <div>
+                    <div className="font-medium text-destructive">Delete Account</div>
+                    <div className="text-sm text-muted-foreground">Permanently delete your account and all data</div>
+                  </div>
+                  <Button variant="destructive" size="sm" onClick={handleDeleteAccount}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
           
-          {/* Security Tab */}
-          <TabsContent value="security">
+          {/* Security Settings */}
+          <TabsContent value="security" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Security Settings</CardTitle>
-                <CardDescription>
-                  Manage your account security and authentication preferences
-                </CardDescription>
+                <CardDescription>Manage your account security</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">Two-Factor Authentication</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Add an extra layer of security to your account
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={twoFactorEnabled} 
-                      onCheckedChange={setTwoFactorEnabled} 
-                    />
+              <CardContent className="space-y-2">
+                <div className="flex justify-between items-center py-2">
+                  <div>
+                    <div className="font-medium">Password</div>
+                    <div className="text-sm text-muted-foreground">Last changed 30 days ago</div>
                   </div>
-                  
-                  {twoFactorEnabled && (
-                    <div className="bg-muted p-4 rounded-lg">
-                      <p className="text-sm mb-3">
-                        Two-factor authentication is enabled. You will receive a verification code each time you log in.
-                      </p>
-                      <Button size="sm" variant="outline">
-                        <Smartphone className="mr-2 h-4 w-4" />
-                        Manage Devices
-                      </Button>
-                    </div>
-                  )}
-                  
-                  <Separator />
-                  
-                  <div className="space-y-3">
-                    <Label className="text-base">Password</Label>
-                    <Button variant="outline">
-                      <KeyRound className="mr-2 h-4 w-4" />
-                      Change Password
-                    </Button>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-3">
-                    <Label className="text-base">Session Management</Label>
-                    <div className="bg-muted p-4 rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <p className="text-sm font-medium">Current Session</p>
-                          <p className="text-xs text-muted-foreground">Chrome on Windows • Active Now</p>
-                        </div>
-                        <Badge variant="outline">Current</Badge>
-                      </div>
-                      <Button variant="destructive" size="sm">Sign Out of All Devices</Button>
-                    </div>
-                  </div>
+                  <Button variant="outline" size="sm">
+                    Change Password
+                  </Button>
                 </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between items-center py-2">
+                  <div>
+                    <div className="font-medium">Two-Factor Authentication</div>
+                    <div className="text-sm text-muted-foreground">
+                      <Badge variant="warning">Not Enabled</Badge>
+                    </div>
+                  </div>
+                  <Button size="sm">
+                    <ShieldCheck className="h-4 w-4 mr-2" />
+                    Enable
+                  </Button>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between items-center py-2">
+                  <div>
+                    <div className="font-medium">Active Sessions</div>
+                    <div className="text-sm text-muted-foreground">1 active session on this device</div>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Manage Sessions
+                  </Button>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between items-center py-2">
+                  <div>
+                    <div className="font-medium">Logout Everywhere</div>
+                    <div className="text-sm text-muted-foreground">Sign out from all devices</div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={logout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout All
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-yellow-50 border-yellow-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-yellow-800 flex items-center">
+                  <AlertTriangle className="h-5 w-5 mr-2 text-yellow-600" />
+                  Security Recommendations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm text-yellow-800">
+                  <li className="flex items-start">
+                    <AlertTriangle className="h-4 w-4 mr-2 shrink-0 mt-0.5 text-yellow-600" />
+                    <span>Enable two-factor authentication for enhanced security</span>
+                  </li>
+                  <li className="flex items-start">
+                    <AlertTriangle className="h-4 w-4 mr-2 shrink-0 mt-0.5 text-yellow-600" />
+                    <span>Use a strong, unique password that you don't use elsewhere</span>
+                  </li>
+                </ul>
               </CardContent>
             </Card>
           </TabsContent>
           
-          {/* Billing Tab */}
-          <TabsContent value="billing">
+          {/* Data & Privacy Settings */}
+          <TabsContent value="data" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Subscription and Billing</CardTitle>
-                <CardDescription>
-                  Manage your subscription, payment methods, and billing history
-                </CardDescription>
+                <CardTitle>Data & Privacy</CardTitle>
+                <CardDescription>Manage your data and privacy settings</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-bold text-lg">Business Plan</h3>
-                      <p className="text-muted-foreground text-sm">10,000 messages per month</p>
-                    </div>
-                    <Badge>Current Plan</Badge>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between items-center py-2">
+                  <div>
+                    <div className="font-medium">Data Export</div>
+                    <div className="text-sm text-muted-foreground">Download all your data in JSON format</div>
                   </div>
-                  <div className="flex items-end gap-1 mb-2">
-                    <span className="text-2xl font-bold">$49</span>
-                    <span className="text-muted-foreground mb-1">/month</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button>Upgrade Plan</Button>
-                    <Button variant="outline">Manage Subscription</Button>
-                  </div>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
                 </div>
                 
-                <div className="space-y-4">
+                <Separator />
+                
+                <div className="flex justify-between items-center py-2">
                   <div>
-                    <h3 className="font-medium mb-2">Payment Method</h3>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-6 bg-muted rounded flex items-center justify-center">
-                          <CreditCard size={16} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Visa ending in 4242</p>
-                          <p className="text-xs text-muted-foreground">Expires 12/2024</p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm">Edit</Button>
-                    </div>
+                    <div className="font-medium">Message Storage</div>
+                    <div className="text-sm text-muted-foreground">Control how long messages are stored</div>
                   </div>
-                  
+                  <Badge variant="outline">90 Days</Badge>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between items-center py-2">
                   <div>
-                    <h3 className="font-medium mb-2">Billing History</h3>
-                    <div className="border rounded-lg divide-y">
-                      <div className="p-3 flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">Business Plan - Monthly</p>
-                          <p className="text-xs text-muted-foreground">May 1, 2023</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">$49.00</p>
-                          <Button variant="link" size="sm" className="h-auto p-0">Receipt</Button>
-                        </div>
-                      </div>
-                      <div className="p-3 flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">Business Plan - Monthly</p>
-                          <p className="text-xs text-muted-foreground">Apr 1, 2023</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">$49.00</p>
-                          <Button variant="link" size="sm" className="h-auto p-0">Receipt</Button>
-                        </div>
-                      </div>
-                      <div className="p-3 flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">Business Plan - Monthly</p>
-                          <p className="text-xs text-muted-foreground">Mar 1, 2023</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">$49.00</p>
-                          <Button variant="link" size="sm" className="h-auto p-0">Receipt</Button>
-                        </div>
-                      </div>
-                    </div>
+                    <div className="font-medium">API Usage Data</div>
+                    <div className="text-sm text-muted-foreground">Manage data collected from API calls</div>
                   </div>
+                  <Button variant="outline" size="sm">
+                    <Database className="h-4 w-4 mr-2" />
+                    Configure
+                  </Button>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between items-center py-2">
+                  <div>
+                    <div className="font-medium">Privacy Policy</div>
+                    <div className="text-sm text-muted-foreground">Review our privacy practices</div>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <BookCopy className="h-4 w-4 mr-2" />
+                    View
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>SMS Compliance</CardTitle>
+                <CardDescription>Manage SMS legal compliance settings</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between space-x-2">
+                  <div>
+                    <Label htmlFor="opt-out-footer" className="font-medium">Add Opt-Out Footer</Label>
+                    <p className="text-sm text-muted-foreground">Automatically append "Text STOP to unsubscribe" to messages</p>
+                  </div>
+                  <Switch id="opt-out-footer" defaultChecked />
+                </div>
+                
+                <div className="flex items-center justify-between space-x-2">
+                  <div>
+                    <Label htmlFor="check-compliance" className="font-medium">Compliance Checking</Label>
+                    <p className="text-sm text-muted-foreground">Automatically check messages for regulatory compliance</p>
+                  </div>
+                  <Switch id="check-compliance" defaultChecked />
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="font-medium">Compliance Documentation</div>
+                    <div className="text-sm text-muted-foreground">Review SMS legal requirements</div>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Learn More
+                  </Button>
                 </div>
               </CardContent>
             </Card>

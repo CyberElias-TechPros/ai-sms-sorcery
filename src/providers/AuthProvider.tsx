@@ -1,16 +1,17 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore, User } from '@/store/authStore';
+import { useAuthStore, User, AuthCredentials } from '@/store/authStore';
 import { toast } from 'sonner';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (user: Omit<User, 'id'>) => Promise<boolean>;
+  login: (credentials: AuthCredentials) => Promise<boolean>;
+  register: (userData: Omit<User, 'id' | 'role'> & { password: string }) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
+  updateUserProfile: (userData: Partial<User>) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => false,
   logout: () => {},
   loading: true,
+  updateUserProfile: async () => false,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -57,7 +59,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [isAuthenticated, user, storeLogout]);
 
   // Mock login function - in a real app, this would call your API
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async ({ email, password }: AuthCredentials): Promise<boolean> => {
     try {
       setLoading(true);
       
@@ -99,7 +101,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Mock registration function - in a real app, this would call your API
-  const register = async (userData: Omit<User, 'id'>): Promise<boolean> => {
+  const register = async (userData: Omit<User, 'id' | 'role'> & { password: string }): Promise<boolean> => {
     try {
       setLoading(true);
       
@@ -112,18 +114,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
-      // Create new user
+      if (userData.password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        return false;
+      }
+      
+      // Create new user - in a real app, this would be handled by the API
       const newUser: User = {
         ...userData,
         id: `user_${Date.now()}`,
         role: 'user'
       };
       
+      // Remove password from the user object that's stored in state
+      // (password should only be sent to the backend, not stored in frontend state)
+      const { password, ...userWithoutPassword } = newUser as (User & { password: string });
+      
       // Generate mock token
       const mockToken = `mock_token_${Date.now()}`;
       
       // Update store
-      setUser(newUser);
+      setUser(userWithoutPassword);
       setToken(mockToken);
       
       toast.success("Registration successful!");
@@ -144,6 +155,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     toast.success("You have been logged out");
   };
 
+  const updateUserProfile = async (userData: Partial<User>): Promise<boolean> => {
+    try {
+      setLoading(true);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      if (user) {
+        // Update user in store
+        const updatedUser = { ...user, ...userData };
+        setUser(updatedUser);
+        
+        toast.success("Profile updated successfully");
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Profile update error:", error);
+      toast.error("Failed to update profile");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       isAuthenticated, 
@@ -151,7 +188,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       login,
       register,
       logout,
-      loading
+      loading,
+      updateUserProfile
     }}>
       {children}
     </AuthContext.Provider>

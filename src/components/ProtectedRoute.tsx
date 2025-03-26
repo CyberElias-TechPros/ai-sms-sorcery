@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/providers/AuthProvider';
 import { Loader2 } from 'lucide-react';
 
@@ -11,12 +11,16 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+    // Only redirect when we're sure the user is not authenticated
     if (!loading && !isAuthenticated) {
-      navigate('/auth');
+      // Store the path user was trying to access for redirection after login
+      const returnUrl = encodeURIComponent(location.pathname + location.search);
+      navigate(`/auth?returnUrl=${returnUrl}`);
     }
-  }, [isAuthenticated, loading, navigate]);
+  }, [isAuthenticated, loading, navigate, location]);
 
   // Show loading state while checking authentication
   if (loading) {
@@ -24,7 +28,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
-          <p className="text-muted-foreground">Checking authentication...</p>
+          <p className="text-muted-foreground">Verifying authentication...</p>
         </div>
       </div>
     );

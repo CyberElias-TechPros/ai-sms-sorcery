@@ -7,6 +7,9 @@ import {
   Activity, LogOut, Menu, X, MessageCircle, BrainCircuit,
   FileText
 } from "lucide-react";
+import { useAuth } from "@/providers/AuthProvider";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface SidebarItemProps {
   icon: React.ElementType;
@@ -48,6 +51,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
   const location = useLocation();
+  const { user, logout } = useAuth();
   
   useEffect(() => {
     const checkScreenSize = () => {
@@ -81,6 +85,14 @@ const Layout = ({ children }: LayoutProps) => {
     if (isMobileView) {
       setIsSidebarOpen(false);
     }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase();
   };
 
   const navItems = [
@@ -155,6 +167,7 @@ const Layout = ({ children }: LayoutProps) => {
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive"
+            onClick={logout}
           >
             <LogOut size={18} />
             <span>Logout</span>
@@ -181,9 +194,41 @@ const Layout = ({ children }: LayoutProps) => {
               <span className="w-2 h-2 rounded-full bg-success mr-2 animate-pulse-slow"></span>
               Connected
             </Button>
-            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-              JS
-            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Avatar className="h-8 w-8 cursor-pointer">
+                  <AvatarImage src={user?.avatar} alt={user?.name} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    {user?.name ? getInitials(user.name) : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-0.5">
+                    <p className="text-sm font-medium">{user?.name}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <Link to="/profile-settings">
+                  <DropdownMenuItem>
+                    Profile Settings
+                  </DropdownMenuItem>
+                </Link>
+                <Link to="/api-settings">
+                  <DropdownMenuItem>
+                    API Settings
+                  </DropdownMenuItem>
+                </Link>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         

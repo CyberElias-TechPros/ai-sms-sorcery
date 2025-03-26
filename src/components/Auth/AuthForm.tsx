@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui-custom/Button";
@@ -22,7 +21,7 @@ const AuthForm = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (await login(loginEmail, loginPassword)) {
+    if (await login({ email: loginEmail, password: loginPassword })) {
       navigate("/dashboard");
     }
   };
@@ -39,7 +38,6 @@ const AuthForm = () => {
       email: registerEmail,
       name: registerName,
       password: registerPassword,
-      role: "user"
     })) {
       navigate("/dashboard");
     }
@@ -194,7 +192,7 @@ const AuthForm = () => {
           </Button>
           <Button variant="outline" disabled>
             <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M16.365 1.43c0 1.14-.788 2.042-1.97 2.042-1.177 0-2.042-.9-2.042-2.042 0-1.14.864-2.052 2.043-2.052 1.18 0 1.97.91 1.97 2.052zm4.99 17.716c-.2.632-.45 1.34-.766 2.137-.16.396-.33.796-.5 1.2-.265.640.41.95.4 1.7.39 1.81.694 2.645 1.216 2.645l.176-.027c.734-.28 2.315-1.267 2.315-8.1 0-2.245-.47-4.132-1.125-5.63-.655-1.5-1.51-2.622-2.14-3.195-.63-.592-1.17-.851-1.17-.851l.017 3.821s.347 1.755.854 3.32c.507 1.566 1.144 2.933 1.143 3.585zm-9.53 5.662V12.475c0-1.142-.946-2.16-2.055-2.16-1.11 0-2.053 1.018-2.053 2.16v12.332c0 1.142.944 2.071 2.053 2.071 1.11 0 2.055-.929 2.055-2.071zm-9.193.1c0 1.14-.798 2.052-1.973 2.052-1.174 0-2.042-.879-2.042-2.027 0-1.147.868-2.077 2.042-2.077 1.175 0 1.973.93 1.973 2.052z"></path>
+              <path d="M16.365 1.43c0 1.14-.788 2.042-1.97 2.042-1.174 0-2.042-.879-2.042-2.027 0-1.147.868-2.077 2.042-2.077 1.175 0 1.973.93 1.973 2.052z"></path>
             </svg>
             GitHub
           </Button>

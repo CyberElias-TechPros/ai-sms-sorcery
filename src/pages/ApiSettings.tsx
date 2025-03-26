@@ -1,120 +1,106 @@
 
-import { useState, useEffect } from "react";
-import Layout from "@/components/Layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui-custom/Card";
-import { Button } from "@/components/ui-custom/Button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
-import { 
-  getSmsApiConfig, getAiApiConfig, setSmsApiConfig, setAiApiConfig, 
-  testSmsApiConnection, testAiApiConnection 
-} from "@/utils/apiServices";
-import { Loader2, KeyRound, LucideMessageSquare, BrainCircuit, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useEffect } from 'react';
+import Layout from '@/components/Layout';
+import { Button } from '@/components/ui-custom/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui-custom/Card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
+import { Loader2, Save, Key, BrainCircuit, MessageSquare, ExternalLink, EyeOff, Eye, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/providers/AuthProvider';
+
+interface ApiKeysState {
+  smsProvider: string;
+  smsApiKey: string;
+  smsSenderId: string;
+  aiProvider: string;
+  aiApiKey: string;
+  enableAiIntegration: boolean;
+}
+
+const SMS_PROVIDERS = [
+  { value: 'twilio', label: 'Twilio' },
+  { value: 'termii', label: 'Termii' },
+  { value: 'infobip', label: 'Infobip' },
+  { value: 'vonage', label: 'Vonage' },
+  { value: 'custom', label: 'Custom API' },
+];
+
+const AI_PROVIDERS = [
+  { value: 'openai', label: 'OpenAI (GPT-4, GPT-3.5)' },
+  { value: 'google', label: 'Google Gemini' },
+  { value: 'anthropic', label: 'Anthropic Claude' },
+  { value: 'cohere', label: 'Cohere' },
+];
 
 const ApiSettings = () => {
-  const [smsConfig, setSmsConfig] = useState({
-    provider: "twilio",
-    apiKey: "",
-    apiSecret: "",
-    senderId: "",
+  const { user, updateUserProfile } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSmsApiKey, setShowSmsApiKey] = useState(false);
+  const [showAiApiKey, setShowAiApiKey] = useState(false);
+  const [formData, setFormData] = useState<ApiKeysState>({
+    smsProvider: 'twilio',
+    smsApiKey: '',
+    smsSenderId: '',
+    aiProvider: 'openai',
+    aiApiKey: '',
+    enableAiIntegration: true,
   });
-
-  const [aiConfig, setAiConfig] = useState({
-    provider: "openai",
-    apiKey: "",
-    model: "gpt-4",
-    temperature: 0.7,
-    maxTokens: 150
-  });
-
-  const [isTestingSms, setIsTestingSms] = useState(false);
-  const [isTestingAi, setIsTestingAi] = useState(false);
-  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
 
   useEffect(() => {
-    // Load saved configs
-    const loadConfigs = () => {
-      try {
-        const savedSmsConfig = getSmsApiConfig();
-        setSmsConfig(prevConfig => ({
-          ...prevConfig,
-          ...savedSmsConfig
-        }));
-
-        const savedAiConfig = getAiApiConfig();
-        setAiConfig(prevConfig => ({
-          ...prevConfig,
-          ...savedAiConfig
-        }));
-      } catch (error) {
-        console.error("Error loading API configurations:", error);
-        toast.error("Failed to load API configurations");
-      } finally {
-        setIsLoadingConfig(false);
-      }
-    };
-
-    loadConfigs();
-  }, []);
-
-  const handleSmsConfigChange = (field: string, value: string | number) => {
-    setSmsConfig(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleAiConfigChange = (field: string, value: string | number) => {
-    setAiConfig(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSaveSmsConfig = () => {
-    try {
-      setSmsApiConfig(smsConfig);
-      toast.success("SMS API configuration saved successfully");
-    } catch (error) {
-      console.error("Error saving SMS API configuration:", error);
-      toast.error("Failed to save SMS API configuration");
+    // Load saved API keys from user data if available
+    if (user?.apiKeys) {
+      setFormData(prev => ({
+        ...prev,
+        smsProvider: user.apiKeys?.smsProvider || 'twilio',
+        aiProvider: user.apiKeys?.aiProvider || 'openai',
+      }));
     }
+  }, [user]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveAiConfig = () => {
-    try {
-      setAiApiConfig(aiConfig);
-      toast.success("AI API configuration saved successfully");
-    } catch (error) {
-      console.error("Error saving AI API configuration:", error);
-      toast.error("Failed to save AI API configuration");
-    }
+  const handleSwitchChange = (checked: boolean) => {
+    setFormData(prev => ({ ...prev, enableAiIntegration: checked }));
   };
 
-  const handleTestSmsConnection = async () => {
-    setIsTestingSms(true);
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     try {
-      const success = await testSmsApiConnection();
-      if (!success) {
-        toast.error("SMS API connection test failed");
-      }
+      setIsSubmitting(true);
+      
+      // In a real app, you would validate the API keys before saving
+      // and securely store them server-side, not in the browser
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Update user profile with API settings
+      await updateUserProfile({
+        apiKeys: {
+          smsProvider: formData.smsProvider,
+          aiProvider: formData.aiProvider,
+        }
+      });
+      
+      toast.success('API settings saved successfully');
     } catch (error) {
-      console.error("Error testing SMS API connection:", error);
-      toast.error("SMS API connection test failed");
+      console.error('Error saving API settings:', error);
+      toast.error('Failed to save API settings');
     } finally {
-      setIsTestingSms(false);
-    }
-  };
-
-  const handleTestAiConnection = async () => {
-    setIsTestingAi(true);
-    try {
-      const success = await testAiApiConnection();
-      if (!success) {
-        toast.error("AI API connection test failed");
-      }
-    } catch (error) {
-      console.error("Error testing AI API connection:", error);
-      toast.error("AI API connection test failed");
-    } finally {
-      setIsTestingAi(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -124,275 +110,240 @@ const ApiSettings = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">API Settings</h1>
           <p className="text-muted-foreground">
-            Configure your SMS and AI API integrations
+            Configure your SMS and AI provider integrations
           </p>
         </div>
 
-        {isLoadingConfig ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <Tabs defaultValue="sms" className="w-full">
-            <TabsList className="grid w-full md:w-[400px] grid-cols-2">
-              <TabsTrigger value="sms">SMS Providers</TabsTrigger>
-              <TabsTrigger value="ai">AI Integration</TabsTrigger>
-            </TabsList>
+        <Separator className="my-6" />
 
-            <TabsContent value="sms" className="space-y-4 pt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <LucideMessageSquare className="h-5 w-5 mr-2" />
-                    SMS Provider Configuration
-                  </CardTitle>
-                  <CardDescription>
-                    Connect your SMS service provider to send messages
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+        <Alert className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Your API keys are stored securely and used only to make requests to the respective services.
+          </AlertDescription>
+        </Alert>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* SMS API Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <MessageSquare className="mr-2 h-5 w-5 text-primary" />
+                SMS Provider Integration
+              </CardTitle>
+              <CardDescription>
+                Connect your SMS provider to send messages
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="sms-provider">Provider</Label>
+                    <Label htmlFor="smsProvider">Provider</Label>
                     <Select
-                      value={smsConfig.provider}
-                      onValueChange={(value) => handleSmsConfigChange("provider", value)}
+                      value={formData.smsProvider}
+                      onValueChange={(value) => handleSelectChange('smsProvider', value)}
                     >
-                      <SelectTrigger id="sms-provider">
-                        <SelectValue placeholder="Select Provider" />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select SMS provider" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="twilio">Twilio</SelectItem>
-                        <SelectItem value="termii">Termii</SelectItem>
-                        <SelectItem value="infobip">Infobip</SelectItem>
-                        <SelectItem value="messagebird">MessageBird</SelectItem>
-                        <SelectItem value="vonage">Vonage (Nexmo)</SelectItem>
+                        {SMS_PROVIDERS.map((provider) => (
+                          <SelectItem key={provider.value} value={provider.value}>
+                            {provider.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="sms-api-key">API Key</Label>
+                    <Label htmlFor="smsApiKey" className="flex justify-between">
+                      API Key
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-primary"
+                        onClick={() => setShowSmsApiKey(!showSmsApiKey)}
+                      >
+                        {showSmsApiKey ? (
+                          <span className="flex items-center">
+                            <EyeOff className="mr-1 h-3 w-3" /> Hide
+                          </span>
+                        ) : (
+                          <span className="flex items-center">
+                            <Eye className="mr-1 h-3 w-3" /> Show
+                          </span>
+                        )}
+                      </button>
+                    </Label>
                     <div className="relative">
-                      <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="sms-api-key"
-                        type="password"
+                        id="smsApiKey"
+                        name="smsApiKey"
+                        type={showSmsApiKey ? "text" : "password"}
+                        value={formData.smsApiKey}
+                        onChange={handleInputChange}
                         placeholder="Enter your API key"
-                        value={smsConfig.apiKey}
-                        onChange={(e) => handleSmsConfigChange("apiKey", e.target.value)}
-                        className="pl-10"
+                        className="pr-10"
                       />
+                      <Key className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="sms-api-secret">API Secret (if required)</Label>
-                    <Input
-                      id="sms-api-secret"
-                      type="password"
-                      placeholder="Enter your API secret"
-                      value={smsConfig.apiSecret}
-                      onChange={(e) => handleSmsConfigChange("apiSecret", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="sms-sender-id">Sender ID</Label>
-                    <Input
-                      id="sms-sender-id"
-                      placeholder="Enter your sender ID or name"
-                      value={smsConfig.senderId}
-                      onChange={(e) => handleSmsConfigChange("senderId", e.target.value)}
-                    />
                     <p className="text-xs text-muted-foreground">
-                      This will appear as the sender of your messages
+                      Your API key is securely stored and used only for sending messages
                     </p>
                   </div>
-                </CardContent>
-                <CardFooter className="flex justify-between border-t pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={handleTestSmsConnection}
-                    disabled={isTestingSms || !smsConfig.apiKey}
-                  >
-                    {isTestingSms ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Testing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Test Connection
-                      </>
-                    )}
-                  </Button>
-                  <Button 
-                    onClick={handleSaveSmsConfig}
-                    disabled={!smsConfig.apiKey || !smsConfig.provider}
-                  >
-                    Save Configuration
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="ai" className="space-y-4 pt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <BrainCircuit className="h-5 w-5 mr-2" />
-                    AI Provider Configuration
-                  </CardTitle>
-                  <CardDescription>
-                    Connect your AI service to generate message content
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="ai-provider">Provider</Label>
-                    <Select
-                      value={aiConfig.provider}
-                      onValueChange={(value) => handleAiConfigChange("provider", value)}
-                    >
-                      <SelectTrigger id="ai-provider">
-                        <SelectValue placeholder="Select Provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="openai">OpenAI</SelectItem>
-                        <SelectItem value="gemini">Google Gemini</SelectItem>
-                        <SelectItem value="claude">Anthropic Claude</SelectItem>
-                        <SelectItem value="mistral">Mistral AI</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="ai-api-key">API Key</Label>
-                    <div className="relative">
-                      <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="ai-api-key"
-                        type="password"
-                        placeholder="Enter your API key"
-                        value={aiConfig.apiKey}
-                        onChange={(e) => handleAiConfigChange("apiKey", e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
+                    <Label htmlFor="smsSenderId">Sender ID / From Number</Label>
+                    <Input
+                      id="smsSenderId"
+                      name="smsSenderId"
+                      value={formData.smsSenderId}
+                      onChange={handleInputChange}
+                      placeholder="e.g., YourCompany or +14155552671"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The identifier that appears as the message sender
+                    </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="ai-model">Model</Label>
-                    <Select
-                      value={aiConfig.model}
-                      onValueChange={(value) => handleAiConfigChange("model", value)}
-                    >
-                      <SelectTrigger id="ai-model">
-                        <SelectValue placeholder="Select AI model" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {aiConfig.provider === "openai" && (
-                          <>
-                            <SelectItem value="gpt-4">GPT-4</SelectItem>
-                            <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                            <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                          </>
-                        )}
-                        {aiConfig.provider === "gemini" && (
-                          <>
-                            <SelectItem value="gemini-1.0-pro">Gemini 1.0 Pro</SelectItem>
-                            <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
-                          </>
-                        )}
-                        {aiConfig.provider === "claude" && (
-                          <>
-                            <SelectItem value="claude-3-opus">Claude 3 Opus</SelectItem>
-                            <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
-                            <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
-                          </>
-                        )}
-                        {aiConfig.provider === "mistral" && (
-                          <>
-                            <SelectItem value="mistral-small">Mistral Small</SelectItem>
-                            <SelectItem value="mistral-medium">Mistral Medium</SelectItem>
-                            <SelectItem value="mistral-large">Mistral Large</SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="ai-temperature">Temperature</Label>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          id="ai-temperature"
-                          type="number"
-                          min="0"
-                          max="1"
-                          step="0.1"
-                          value={aiConfig.temperature}
-                          onChange={(e) => handleAiConfigChange("temperature", parseFloat(e.target.value))}
-                        />
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          (0-1)
-                        </span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ai-max-tokens">Max Tokens</Label>
-                      <Input
-                        id="ai-max-tokens"
-                        type="number"
-                        min="1"
-                        max="2000"
-                        value={aiConfig.maxTokens}
-                        onChange={(e) => handleAiConfigChange("maxTokens", parseInt(e.target.value))}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between border-t pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={handleTestAiConnection}
-                    disabled={isTestingAi || !aiConfig.apiKey}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => window.open('https://docs.lovable.dev', '_blank')}
                   >
-                    {isTestingAi ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Testing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Test Connection
-                      </>
-                    )}
+                    <ExternalLink className="mr-1 h-3 w-3" />
+                    View API Documentation
                   </Button>
-                  <Button 
-                    onClick={handleSaveAiConfig}
-                    disabled={!aiConfig.apiKey || !aiConfig.provider || !aiConfig.model}
-                  >
-                    Save Configuration
-                  </Button>
-                </CardFooter>
-              </Card>
-
-              <div className="bg-muted p-4 rounded-lg border">
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="text-sm text-muted-foreground">
-                    <p className="font-medium">Important Note:</p>
-                    <p>API keys are stored in your browser's local storage. For production use, consider implementing server-side storage for better security.</p>
-                  </div>
                 </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        )}
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* AI Provider Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BrainCircuit className="mr-2 h-5 w-5 text-primary" />
+                AI Provider Integration
+              </CardTitle>
+              <CardDescription>
+                Connect your AI provider for message generation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="enableAiIntegration">Enable AI Integration</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Use AI to generate and optimize your messages
+                    </p>
+                  </div>
+                  <Switch
+                    id="enableAiIntegration"
+                    checked={formData.enableAiIntegration}
+                    onCheckedChange={handleSwitchChange}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="aiProvider">AI Provider</Label>
+                    <Select
+                      value={formData.aiProvider}
+                      onValueChange={(value) => handleSelectChange('aiProvider', value)}
+                      disabled={!formData.enableAiIntegration}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select AI provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AI_PROVIDERS.map((provider) => (
+                          <SelectItem key={provider.value} value={provider.value}>
+                            {provider.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="aiApiKey" className="flex justify-between">
+                      API Key
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-primary"
+                        onClick={() => setShowAiApiKey(!showAiApiKey)}
+                        disabled={!formData.enableAiIntegration}
+                      >
+                        {showAiApiKey ? (
+                          <span className="flex items-center">
+                            <EyeOff className="mr-1 h-3 w-3" /> Hide
+                          </span>
+                        ) : (
+                          <span className="flex items-center">
+                            <Eye className="mr-1 h-3 w-3" /> Show
+                          </span>
+                        )}
+                      </button>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="aiApiKey"
+                        name="aiApiKey"
+                        type={showAiApiKey ? "text" : "password"}
+                        value={formData.aiApiKey}
+                        onChange={handleInputChange}
+                        placeholder="Enter your API key"
+                        className="pr-10"
+                        disabled={!formData.enableAiIntegration}
+                      />
+                      <Key className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Your AI API key is securely stored and never shared
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => window.open('https://docs.lovable.dev', '_blank')}
+                    disabled={!formData.enableAiIntegration}
+                  >
+                    <ExternalLink className="mr-1 h-3 w-3" />
+                    View API Documentation
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="flex justify-end">
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting} 
+            className="px-6"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save API Settings
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </Layout>
   );

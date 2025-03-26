@@ -8,10 +8,16 @@ export interface User {
   name: string;
   avatar?: string;
   role: 'user' | 'admin';
+  phoneNumber?: string;
   apiKeys?: {
     smsProvider?: string;
     aiProvider?: string;
   };
+}
+
+export interface AuthCredentials {
+  email: string;
+  password: string;
 }
 
 interface AuthState {
