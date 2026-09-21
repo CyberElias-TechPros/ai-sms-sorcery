@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.dev.vars
+worker/.wrangler/
+node_modules/
+.env
+.env.local

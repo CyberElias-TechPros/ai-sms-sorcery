@@ -1,433 +1,290 @@
+/**
+ * SMS Composer — compose, personalize and send/schedule messages live.
+ */
 
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui-custom/Card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui-custom/Card";
 import { Button } from "@/components/ui-custom/Button";
 import { Badge } from "@/components/ui-custom/Badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import ContactsSearch, { Contact } from "@/components/Contacts/ContactsSearch";
 import MessageTemplate from "@/components/Messaging/MessageTemplate";
-import { useToast } from "@/hooks/use-toast";
-import { sendSms, scheduleMessage, MessageRecipient, MessageContent } from "@/utils/apiServices";
-import { useMessageTemplates } from "@/hooks/useMessageTemplates";
-import { 
-  MessageSquare, Calendar, Send, ArrowLeft, Plus, 
-  Copy, Clock, ImagePlus, BrainCircuit, UploadCloud
+import { toast } from "sonner";
+import { useSendMessages, useCreateCampaign, useTemplates, useTemplateUsage } from "@/hooks/useApi";
+import { ApiError } from "@/lib/api";
+import {
+  MessageSquare, Calendar, Send, ArrowLeft, Copy, Clock, BrainCircuit, Loader2,
 } from "lucide-react";
 
 const SMSComposer = () => {
   const [message, setMessage] = useState("");
   const [selectedTab, setSelectedTab] = useState<string>("compose");
   const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
-  const [isSending, setIsSending] = useState(false);
   const [enableScheduling, setEnableScheduling] = useState(false);
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
-  const [characterCount, setCharacterCount] = useState(0);
-  const [mediaEnabled, setMediaEnabled] = useState(false);
-  const { toast } = useToast();
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [showMedia, setShowMedia] = useState(false);
+  const [title, setTitle] = useState("");
+  const location = useLocation();
   const navigate = useNavigate();
 
-  // Use the template hook instead of hardcoded templates
-  const { templates, loadTemplates, isLoading } = useMessageTemplates();
-  
+  const { data: templatesData, isLoading: templatesLoading } = useTemplates();
+  const templateUsage = useTemplateUsage();
+  const sendMessages = useSendMessages();
+  const createCampaign = useCreateCampaign();
+
+  // Prefill from AI generator / dashboard "use" actions
   useEffect(() => {
-    loadTemplates();
-  }, [loadTemplates]);
-  
-  const handleContactSelection = (contacts: Contact[]) => {
-    setSelectedContacts(contacts);
+    const state = location.state as { prefill?: string } | null;
+    if (state?.prefill) {
+      setMessage(state.prefill);
+      toast.success("Message loaded into composer");
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
+
+  const characterCount = message.length;
+
+  const getSmsCountEstimate = () => {
+    if (characterCount === 0) return 0;
+    const isAscii = [...message].every((c) => c.charCodeAt(0) < 128);
+    const single = isAscii ? 160 : 70;
+    const multi = isAscii ? 153 : 67;
+    return characterCount <= single ? 1 : Math.ceil(characterCount / multi);
   };
-  
-  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value;
-    setMessage(text);
-    setCharacterCount(text.length);
-  };
-  
+
   const useTemplate = (id: string, content: string) => {
     setMessage(content);
-    setCharacterCount(content.length);
-    
-    toast({
-      title: "Template Applied",
-      description: "Message template has been applied to composer",
-    });
-    
-    // Switch back to compose tab
+    templateUsage.mutate(id);
+    toast.success("Template applied to composer");
     setSelectedTab("compose");
   };
-  
+
   const handleSendMessage = async () => {
-    // Validate
     if (!message.trim()) {
-      toast({
-        title: "Missing Message",
-        description: "Please enter a message to send",
-        variant: "destructive",
-      });
+      toast.error("Please enter a message to send");
       return;
     }
-    
     if (selectedContacts.length === 0) {
-      toast({
-        title: "No Recipients",
-        description: "Please select at least one recipient",
-        variant: "destructive",
-      });
+      toast.error("Please select at least one recipient");
       return;
     }
-    
-    // Format recipients
-    const recipients: MessageRecipient[] = selectedContacts.map((contact) => ({
-      phoneNumber: contact.phoneNumber,
-      name: contact.name
+
+    const recipients = selectedContacts.map((c) => ({
+      contactId: c.id,
+      phoneNumber: c.phoneNumber,
+      name: c.name,
     }));
-    
-    // Create message content
-    const content: MessageContent = {
-      body: message
-    };
-    
-    setIsSending(true);
-    
+
     try {
       if (enableScheduling) {
-        // Validate schedule datetime
         if (!scheduleDate || !scheduleTime) {
-          toast({
-            title: "Invalid Schedule",
-            description: "Please select both date and time for scheduling",
-            variant: "destructive",
-          });
-          setIsSending(false);
+          toast.error("Please select both date and time for scheduling");
           return;
         }
-        
-        const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
-        
-        if (scheduledDateTime <= new Date()) {
-          toast({
-            title: "Invalid Schedule",
-            description: "Scheduled time must be in the future",
-            variant: "destructive",
-          });
-          setIsSending(false);
+        const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+        if (new Date(scheduledAt) <= new Date()) {
+          toast.error("Scheduled time must be in the future");
           return;
         }
-        
-        // Schedule the message
-        const scheduleId = await scheduleMessage(recipients, content, scheduledDateTime);
-        
-        if (scheduleId) {
-          // Clear form after successful scheduling
-          setMessage("");
-          setSelectedContacts([]);
-          setEnableScheduling(false);
-          setScheduleDate("");
-          setScheduleTime("");
-          
-          // Navigate to scheduled messages
-          toast({
-            title: "Success",
-            description: "Message has been scheduled successfully",
-          });
-          
-          // Optional: redirect to scheduled messages page
-          setTimeout(() => {
-            navigate("/scheduled");
-          }, 1500);
-        }
+        await createCampaign.mutateAsync({
+          title: title || `Campaign — ${new Date(scheduledAt).toLocaleDateString()}`,
+          body: message,
+          channel: "sms",
+          recipients,
+          scheduledAt,
+          mediaUrl: mediaUrl || undefined,
+        });
+        toast.success("Message scheduled successfully");
+        setTimeout(() => navigate("/scheduled"), 900);
       } else {
-        // Send immediately
-        const success = await sendSms(recipients, content);
-        
-        if (success) {
-          // Clear form after successful send
-          setMessage("");
-          setSelectedContacts([]);
-          
-          // Navigate to message logs
-          toast({
-            title: "Success",
-            description: "Message has been sent successfully",
-          });
-          
-          // Optional: redirect to message logs
-          setTimeout(() => {
-            navigate("/message-logs");
-          }, 1500);
+        const result = await sendMessages.mutateAsync({
+          body: message,
+          recipients,
+          channel: "sms",
+          mediaUrl: mediaUrl || undefined,
+          idempotencyKey: crypto.randomUUID(),
+        });
+        const delivered = result.messages.filter((m) => ["delivered", "sent"].includes(m.status)).length;
+        const failed = result.messages.filter((m) => m.status === "failed").length;
+        toast.success(`Message sent to ${result.count} recipient${result.count !== 1 ? "s" : ""}${failed ? ` (${failed} failed)` : ""}`);
+        if (result.compliance.footerAppended) {
+          toast.info("Opt-out footer was appended for compliance");
         }
+        if (result.skippedOptedOut > 0) {
+          toast.warning(`${result.skippedOptedOut} recipient(s) skipped — opted out`);
+        }
+        setTimeout(() => navigate("/message-logs"), 900);
       }
-    } catch (error) {
-      console.error("Error handling message:", error);
-      toast({
-        title: "Error",
-        description: "An error occurred while processing your request",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSending(false);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "An error occurred while processing your request");
     }
   };
-  
-  const getSmsCountEstimate = () => {
-    // Standard SMS segment is 160 characters
-    if (characterCount === 0) return 0;
-    return Math.ceil(characterCount / 160);
-  };
-  
+
+  const isSending = sendMessages.isPending || createCampaign.isPending;
+
   return (
     <Layout>
-      <div className="space-y-8">
-        {/* Page Header */}
+      <div className="space-y-8 page-enter">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
               <Link to="/dashboard">
-                <Button variant="ghost" size="sm" className="h-8 px-2">
-                  <ArrowLeft size={16} />
-                </Button>
+                <Button variant="ghost" size="sm" className="h-8 px-2"><ArrowLeft size={16} /></Button>
               </Link>
-              <Badge variant="outline" size="sm">
-                <MessageSquare size={12} className="mr-1" />
-                SMS
-              </Badge>
+              <Badge variant="outline" size="sm"><MessageSquare size={12} className="mr-1" />SMS</Badge>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Message Composer</h1>
-            <p className="text-muted-foreground">
-              Create and send SMS messages to your contacts
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight font-display">Message Composer</h1>
+            <p className="text-muted-foreground">Write once — reach everyone who matters</p>
           </div>
           <div className="flex items-center space-x-3">
             <Link to="/ai-generator">
-              <Button variant="outline">
-                <BrainCircuit className="mr-2 h-4 w-4" />
-                Use AI Generator
-              </Button>
+              <Button variant="outline"><BrainCircuit className="mr-2 h-4 w-4" /> Use AI Generator</Button>
             </Link>
           </div>
         </div>
-        
-        {/* Main Content */}
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Column - Contact Selection */}
-          <Card className="lg:col-span-1">
+          <Card className="lg:col-span-1 h-fit">
             <CardHeader>
               <CardTitle className="text-base">Recipients</CardTitle>
-              <CardDescription>
-                Select contacts to receive your message
-              </CardDescription>
+              <CardDescription>Select who will receive this message</CardDescription>
             </CardHeader>
             <CardContent>
-              <ContactsSearch 
-                onSelectContacts={handleContactSelection}
-                selectedContacts={selectedContacts}
-                maxHeight="400px"
-              />
-              
-              <div className="mt-4 text-sm text-muted-foreground">
-                <p>{selectedContacts.length} recipient{selectedContacts.length !== 1 ? 's' : ''} selected</p>
+              <ContactsSearch onSelectContacts={setSelectedContacts} selectedContacts={selectedContacts} maxHeight="380px" />
+              <div className="mt-4 text-sm text-muted-foreground tabular">
+                {selectedContacts.length} recipient{selectedContacts.length !== 1 ? "s" : ""} selected
               </div>
             </CardContent>
           </Card>
-          
-          {/* Right Column - Message Composer */}
+
           <div className="lg:col-span-3 space-y-6">
-            {/* Message Tabs */}
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="compose">Compose Message</TabsTrigger>
                 <TabsTrigger value="templates">Templates</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="compose" className="space-y-4 pt-4">
-                <Card>
+                <Card className="card-aurora">
                   <CardHeader>
                     <CardTitle className="text-base">Compose Message</CardTitle>
-                    <CardDescription>
-                      Create your SMS message
-                    </CardDescription>
+                    <CardDescription>SMS is delivered instantly — WhatsApp opens a send flow per recipient</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {enableScheduling && (
+                      <div className="space-y-2">
+                        <Label htmlFor="campaign-title">Campaign title</Label>
+                        <Input id="campaign-title" placeholder="Monthly Newsletter" value={title} onChange={(e) => setTitle(e.target.value)} />
+                      </div>
+                    )}
                     <Textarea
-                      placeholder="Type your message here..."
+                      placeholder="Type your message here…"
                       value={message}
-                      onChange={handleMessageChange}
-                      className="min-h-[150px] resize-none"
+                      onChange={(e) => setMessage(e.target.value)}
+                      className="min-h-[150px] resize-none text-base"
                     />
-                    
+
                     <div className="flex items-center justify-between text-sm">
-                      <div className={`${characterCount > 160 ? 'text-warning' : 'text-muted-foreground'}`}>
-                        {characterCount} character{characterCount !== 1 ? 's' : ''} 
-                        {characterCount > 0 && ` (${getSmsCountEstimate()} SMS segment${getSmsCountEstimate() !== 1 ? 's' : ''})`}
+                      <div className={characterCount > 160 ? "text-warning tabular" : "text-muted-foreground tabular"}>
+                        {characterCount} character{characterCount !== 1 ? "s" : ""}
+                        {characterCount > 0 && ` · ${getSmsCountEstimate()} SMS segment${getSmsCountEstimate() !== 1 ? "s" : ""}`}
                       </div>
                       <div className="flex items-center space-x-3">
-                        <Button variant="ghost" size="sm" disabled={message.length === 0} onClick={() => setMessage("")}>
-                          Clear
-                        </Button>
-                        <Button variant="ghost" size="sm" disabled={message.length === 0} onClick={() => {
-                          navigator.clipboard.writeText(message);
-                          toast({
-                            title: "Copied to clipboard",
-                            description: "Message copied to clipboard",
-                          });
-                        }}>
-                          <Copy size={14} className="mr-1" />
-                          Copy
+                        <Button variant="ghost" size="sm" disabled={!message} onClick={() => setMessage("")}>Clear</Button>
+                        <Button variant="ghost" size="sm" disabled={!message} onClick={() => { navigator.clipboard.writeText(message); toast.success("Copied"); }}>
+                          <Copy size={14} className="mr-1" /> Copy
                         </Button>
                       </div>
                     </div>
-                    
-                    <div className="flex flex-col space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="media-toggle"
-                          checked={mediaEnabled}
-                          onCheckedChange={setMediaEnabled}
-                        />
-                        <Label htmlFor="media-toggle">Add Media (MMS)</Label>
+
+                    <div className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <Switch id="media" checked={showMedia} onCheckedChange={setShowMedia} />
+                        <Label htmlFor="media" className="text-sm">MMS media URL (optional)</Label>
                       </div>
-                      
-                      {mediaEnabled && (
-                        <Button variant="outline" className="w-full">
-                          <ImagePlus className="mr-2 h-4 w-4" />
-                          Upload Image
-                        </Button>
-                      )}
                     </div>
-                    
-                    <div className="flex flex-col space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="schedule-toggle"
-                          checked={enableScheduling}
-                          onCheckedChange={setEnableScheduling}
-                        />
-                        <Label htmlFor="schedule-toggle">Schedule Message</Label>
+                    {showMedia && (
+                      <Input placeholder="https://… (https only)" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} />
+                    )}
+
+                    <div className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <Switch id="scheduling" checked={enableScheduling} onCheckedChange={setEnableScheduling} />
+                        <Label htmlFor="scheduling" className="text-sm">Schedule for later</Label>
                       </div>
-                      
                       {enableScheduling && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-md">
-                          <div className="space-y-1">
-                            <Label htmlFor="scheduleDate" className="text-xs">Date</Label>
-                            <Input
-                              id="scheduleDate"
-                              type="date"
-                              value={scheduleDate}
-                              onChange={(e) => setScheduleDate(e.target.value)}
-                              min={new Date().toISOString().split('T')[0]}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="scheduleTime" className="text-xs">Time</Label>
-                            <Input
-                              id="scheduleTime"
-                              type="time"
-                              value={scheduleTime}
-                              onChange={(e) => setScheduleTime(e.target.value)}
-                            />
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className="h-8 w-[150px] tabular" />
+                          <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className="h-8 w-[110px] tabular" />
                         </div>
                       )}
                     </div>
                   </CardContent>
-                  <CardFooter className="flex justify-between border-t pt-4">
-                    <div className="text-sm text-muted-foreground flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {enableScheduling ? "Will be sent at scheduled time" : "Will be sent immediately"}
-                    </div>
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={message.trim() === "" || selectedContacts.length === 0 || isSending}
-                    >
-                      {isSending ? (
-                        "Processing..."
-                      ) : (
-                        enableScheduling ? (
-                          <>
-                            <Calendar className="mr-2 h-4 w-4" />
-                            Schedule
-                          </>
-                        ) : (
-                          <>
-                            <Send className="mr-2 h-4 w-4" />
-                            Send Now
-                          </>
-                        )
-                      )}
-                    </Button>
-                  </CardFooter>
                 </Card>
-              </TabsContent>
-              
-              <TabsContent value="templates" className="pt-4">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-base font-medium">Saved Templates</h3>
-                    <Link to="/message-templates">
-                      <Button size="sm">
-                        <Plus size={14} className="mr-1" />
-                        Manage Templates
-                      </Button>
-                    </Link>
-                  </div>
-                  
-                  {isLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {[1, 2, 3, 4].map((i) => (
-                        <Card key={i} className="opacity-50 animate-pulse">
-                          <CardHeader className="pb-3">
-                            <div className="h-5 w-32 bg-muted rounded"></div>
-                            <div className="h-3 w-20 bg-muted rounded"></div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="h-24 bg-muted rounded"></div>
-                          </CardContent>
-                          <CardFooter>
-                            <div className="h-8 w-full bg-muted rounded"></div>
-                          </CardFooter>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : templates.length === 0 ? (
-                    <Card>
-                      <CardContent className="py-8 text-center">
-                        <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-                          <MessageSquare className="h-6 w-6 text-primary" />
-                        </div>
-                        <h3 className="text-xl font-medium mb-1">No templates found</h3>
-                        <p className="text-muted-foreground mb-4">
-                          Create your first message template to get started
-                        </p>
-                        <Link to="/message-templates">
-                          <Button>
-                            <Plus size={16} className="mr-1" />
-                            Create Template
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {templates.map(template => (
-                        <MessageTemplate
-                          key={template.id}
-                          {...template}
-                          onUse={useTemplate}
-                          showActions={false}
-                          onEdit={() => {}}
-                          onDelete={() => {}}
-                        />
-                      ))}
-                    </div>
-                  )}
+
+                <div className="flex justify-end gap-3">
+                  <Button
+                    size="lg"
+                    className="shadow-glow"
+                    onClick={handleSendMessage}
+                    disabled={isSending || !message || selectedContacts.length === 0}
+                  >
+                    {isSending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : enableScheduling ? (
+                      <Clock className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Send className="mr-2 h-4 w-4" />
+                    )}
+                    {enableScheduling ? `Schedule for ${selectedContacts.length || 0}` : `Send to ${selectedContacts.length || 0}`}
+                  </Button>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="templates" className="pt-4">
+                {templatesLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-52" />)}
+                  </div>
+                ) : (templatesData?.items ?? []).length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                        <MessageSquare className="h-6 w-6 text-primary" />
+                      </div>
+                      <h3 className="text-xl font-medium mb-1 font-display">No templates found</h3>
+                      <p className="text-muted-foreground mb-4">Create your first template to reuse it here</p>
+                      <Link to="/message-templates"><Button>Create Template</Button></Link>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(templatesData?.items ?? []).map((template) => (
+                      <MessageTemplate
+                        key={template.id}
+                        id={template.id}
+                        title={template.title}
+                        content={template.content}
+                        category={template.category}
+                        createdAt={template.createdAt}
+                        usageCount={template.usageCount}
+                        model={template.model ?? undefined}
+                        onUse={useTemplate}
+                        showActions={false}
+                        onEdit={() => {}}
+                        onDelete={() => {}}
+                      />
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>

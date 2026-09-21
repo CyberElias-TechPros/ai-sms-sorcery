@@ -29,7 +29,7 @@ const Card = ({
   );
 };
 
-interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
+type CardHeaderProps = React.HTMLAttributes<HTMLDivElement>
 
 const CardHeader = ({ className, ...props }: CardHeaderProps) => {
   return (
@@ -40,7 +40,7 @@ const CardHeader = ({ className, ...props }: CardHeaderProps) => {
   );
 };
 
-interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
+type CardTitleProps = React.HTMLAttributes<HTMLHeadingElement>
 
 const CardTitle = ({ className, ...props }: CardTitleProps) => {
   return (
@@ -54,7 +54,7 @@ const CardTitle = ({ className, ...props }: CardTitleProps) => {
   );
 };
 
-interface CardDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement> {}
+type CardDescriptionProps = React.HTMLAttributes<HTMLParagraphElement>
 
 const CardDescription = ({ className, ...props }: CardDescriptionProps) => {
   return (
@@ -65,13 +65,13 @@ const CardDescription = ({ className, ...props }: CardDescriptionProps) => {
   );
 };
 
-interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {}
+type CardContentProps = React.HTMLAttributes<HTMLDivElement>
 
 const CardContent = ({ className, ...props }: CardContentProps) => {
   return <div className={cn("p-6 pt-0", className)} {...props} />;
 };
 
-interface CardFooterProps extends React.HTMLAttributes<HTMLDivElement> {}
+type CardFooterProps = React.HTMLAttributes<HTMLDivElement>
 
 const CardFooter = ({ className, ...props }: CardFooterProps) => {
   return (
