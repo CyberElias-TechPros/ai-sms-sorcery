@@ -1,0 +1,51 @@
+# AI SMS Sorcery — Cloudflare Worker API
+# Docs: https://developers.cloudflare.com/workers/
+#
+# One-time setup (see docs/DEPLOYMENT.md):
+#   1. npx wrangler d1 create ai_sms_sorcery            → paste the returned database_id below
+#   2. npx wrangler kv namespace create KV              → paste the returned id below
+#   3. npx wrangler queues create sms-dispatch
+#   4. npx wrangler secret put CREDENTIALS_ENCRYPTION_KEY   (generate: openssl rand -base64 32)
+#   5. npx wrangler d1 migrations apply ai_sms_sorcery --remote
+#   6. npm run deploy
+
+name = "ai-sms-sorcery-api"
+main = "src/index.ts"
+compatibility_date = "2025-03-01"
+workers_dev = true
+
+# Allow the Vercel frontend + localhost previews.
+# In production, tighten to your real frontend origin(s), comma-separated.
+[vars]
+CORS_ORIGINS = "*"
+ENVIRONMENT = "production"
+
+# ── D1 (relational data: users, contacts, templates, campaigns, messages) ──
+[[d1_databases]]
+binding = "DB"
+database_name = "ai_sms_sorcery"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# ── KV (rate limiting + short-lived cache) ──
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# ── Queues (async SMS dispatch + retries) ──
+[[queues.producers]]
+binding = "SMS_QUEUE"
+queue = "sms-dispatch"
+
+[[queues.consumers]]
+queue = "sms-dispatch"
+max_retries = 3
+dead_letter_queue = "sms-dispatch-dlq"
+
+# ── Cron (dispatch due scheduled campaigns every minute) ──
+[triggers]
+crons = ["* * * * *"]
+
+# Secrets (set via `wrangler secret put`, never committed):
+#   CREDENTIALS_ENCRYPTION_KEY   base64 32-byte AES-256-GCM key for provider credential encryption
+#   WEBHOOK_SIGNING_SECRET       optional Twilio auth token for status-callback signature verification

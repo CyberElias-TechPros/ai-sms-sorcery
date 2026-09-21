@@ -1,19 +1,8 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { User } from '@/lib/types';
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatar?: string;
-  role: 'user' | 'admin';
-  phoneNumber?: string;
-  apiKeys?: {
-    smsProvider?: string;
-    aiProvider?: string;
-  };
-}
+export type { User };
 
 export interface AuthCredentials {
   email: string;

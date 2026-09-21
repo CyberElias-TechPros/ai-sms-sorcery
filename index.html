@@ -1,18 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SMS AI Magic</title>
-    <meta name="description" content="SMS AI Magic" />
-    <meta name="author" content="Cyber Elias Academy (TechPros)" />
-    <meta property="og:image" content="/og-image.png" />
-  </head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0a12" />
 
+    <!-- Primary SEO -->
+    <title>Sorcery — Divine AI Messaging for SMS & WhatsApp</title>
+    <meta name="description" content="Sorcery is the AI-powered messaging studio: generate on-brand SMS & WhatsApp copy in seconds, schedule campaigns, manage contacts, and track every delivery — one calm, cinematic workspace." />
+    <link rel="canonical" href="https://ai-sms-sorcery.vercel.app/" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sorcery — Divine AI Messaging for SMS & WhatsApp" />
+    <meta property="og:description" content="Generate on-brand messages with AI, schedule campaigns, and track every delivery in one cinematic workspace." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:site_name" content="Sorcery" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Sorcery — Divine AI Messaging" />
+    <meta name="twitter:description" content="AI message generation, scheduling, contacts and delivery analytics for SMS & WhatsApp." />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <!-- Typography: Fraunces (display), Inter (body), JetBrains Mono (data) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Sorcery — AI Messaging Studio",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "AI-powered SMS and WhatsApp messaging: generation, scheduling, contact management and delivery analytics.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": [
+          "AI message generation",
+          "SMS and WhatsApp campaigns",
+          "Message scheduling",
+          "Contact management",
+          "Delivery analytics"
+        ]
+      }
+    </script>
+  </head>
   <body>
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <!-- <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script> -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

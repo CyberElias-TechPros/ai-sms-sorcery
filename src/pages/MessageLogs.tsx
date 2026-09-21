@@ -1,196 +1,182 @@
+/**
+ * Message Logs — live delivery log with filters, pagination, detail, resend, export.
+ */
 
 import Layout from "@/components/Layout";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui-custom/Card";
 import { Badge } from "@/components/ui-custom/Badge";
-import { 
-  MessageSquare, ArrowLeft, Search, Filter, CheckCircle2, AlertCircle, 
-  XCircle, Download, RefreshCcw, MoreHorizontal, Clock, Calendar
+import {
+  MessageSquare, ArrowLeft, Search, CheckCircle2, AlertCircle,
+  XCircle, Download, RefreshCcw, MoreHorizontal, Clock, Smartphone,
 } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Link } from "react-router-dom";
+import { useMessages, useResendMessage, useCancelMessage, MessageFilters } from "@/hooks/useApi";
+import { api, ApiError } from "@/lib/api";
+import type { Message } from "@/lib/types";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
-// Sample message logs data
-const messageLogsData = [
-  { id: 1, recipient: "+1234567890", content: "Your appointment is confirmed for tomorrow at 10:00 AM.", status: "delivered", timestamp: "2023-06-10T10:30:00Z", channel: "sms" },
-  { id: 2, recipient: "+2345678901", content: "Your order #12345 has shipped and will arrive in 2-3 business days.", status: "delivered", timestamp: "2023-06-10T09:45:00Z", channel: "whatsapp" },
-  { id: 3, recipient: "+3456789012", content: "FLASH SALE! Get 30% off all products today only with code FLASH30.", status: "delivered", timestamp: "2023-06-10T08:15:00Z", channel: "sms" },
-  { id: 4, recipient: "+4567890123", content: "Your payment of $49.99 has been processed. Thank you for your purchase!", status: "failed", timestamp: "2023-06-09T16:20:00Z", channel: "sms" },
-  { id: 5, recipient: "+5678901234", content: "Your subscription will renew on June 15th. Reply STOP to cancel.", status: "pending", timestamp: "2023-06-09T14:10:00Z", channel: "sms" },
-  { id: 6, recipient: "+6789012345", content: "Thank you for joining our loyalty program! Your ID is LYT123456.", status: "delivered", timestamp: "2023-06-09T11:30:00Z", channel: "whatsapp" },
-  { id: 7, recipient: "+7890123456", content: "Your account password was reset. If you didn't request this, please contact support.", status: "delivered", timestamp: "2023-06-08T20:45:00Z", channel: "sms" },
-  { id: 8, recipient: "+8901234567", content: "Your table reservation for 4 people at 8:00 PM tonight is confirmed.", status: "failed", timestamp: "2023-06-08T18:30:00Z", channel: "whatsapp" },
-  { id: 9, recipient: "+9012345678", content: "We miss you! Come back and get 15% off your next purchase with code RETURN15.", status: "delivered", timestamp: "2023-06-08T15:20:00Z", channel: "sms" },
-  { id: 10, recipient: "+0123456789", content: "Your flight #AB123 has been delayed by 1 hour. New departure time is 3:45 PM.", status: "delivered", timestamp: "2023-06-08T12:10:00Z", channel: "sms" },
-];
+const STATUS_BADGES: Record<string, { label: string; variant: string; icon: React.ReactNode }> = {
+  delivered: { label: "Delivered", variant: "text-success bg-success/10", icon: <CheckCircle2 size={10} className="mr-1" /> },
+  sent: { label: "Sent", variant: "text-success bg-success/10", icon: <CheckCircle2 size={10} className="mr-1" /> },
+  queued: { label: "Queued", variant: "text-warning bg-warning/10", icon: <Clock size={10} className="mr-1" /> },
+  sending: { label: "Sending", variant: "text-warning bg-warning/10", icon: <Clock size={10} className="mr-1" /> },
+  pending: { label: "Pending", variant: "text-warning bg-warning/10", icon: <Clock size={10} className="mr-1" /> },
+  failed: { label: "Failed", variant: "text-destructive bg-destructive/10", icon: <XCircle size={10} className="mr-1" /> },
+  cancelled: { label: "Cancelled", variant: "text-muted-foreground bg-muted", icon: <AlertCircle size={10} className="mr-1" /> },
+};
+
+/** Friendly provider names — device hand-offs read differently from cloud gateways. */
+const providerLabel = (p: string) =>
+  p === "phone-uri" ? "Your SIM (phone hand-off)" :
+  p === "whatsapp-deeplink" ? "WhatsApp (phone hand-off)" :
+  p === "sandbox" ? "Sandbox (simulated)" : p;
+
+const isDeviceProvider = (p: string) => p === "phone-uri" || p === "whatsapp-deeplink";
 
 const MessageLogs = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [channelFilter, setChannelFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(1);
+  const [detail, setDetail] = useState<Message | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Filter messages based on search query, status and channel filters
-  const filteredLogs = messageLogsData.filter(log => {
-    const matchesSearch = 
-      log.recipient.includes(searchQuery) ||
-      log.content.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" ? true : log.status === statusFilter;
-    const matchesChannel = channelFilter === "all" ? true : log.channel === channelFilter;
-    
-    return matchesSearch && matchesStatus && matchesChannel;
-  });
-  
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }).format(date);
+  const qc = useQueryClient();
+
+  // Debounce search input
+  useMemo(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  const filters: MessageFilters = {
+    q: debouncedQuery || undefined,
+    status: statusFilter,
+    channel: channelFilter,
+    page,
+    pageSize: 15,
   };
-  
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "delivered":
-        return (
-          <Badge variant="outline" className="bg-success/10 text-success">
-            <CheckCircle2 size={10} className="mr-1" />
-            Delivered
-          </Badge>
-        );
-      case "pending":
-        return (
-          <Badge variant="outline" className="bg-warning/10 text-warning">
-            <Clock size={10} className="mr-1" />
-            Pending
-          </Badge>
-        );
-      case "failed":
-        return (
-          <Badge variant="outline" className="bg-destructive/10 text-destructive">
-            <XCircle size={10} className="mr-1" />
-            Failed
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline">
-            <AlertCircle size={10} className="mr-1" />
-            Unknown
-          </Badge>
-        );
-    }
+  const { data, isLoading, refetch } = useMessages(filters);
+  const resend = useResendMessage();
+  const cancelMsg = useCancelMessage();
+
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / 15));
+
+  const formatDate = (dateString: string) =>
+    new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true }).format(new Date(dateString));
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setChannelFilter("all");
+    setPage(1);
   };
-  
-  const getChannelBadge = (channel: string) => {
-    switch (channel) {
-      case "sms":
-        return (
-          <Badge variant="outline" className="bg-primary/10 text-primary">
-            <MessageSquare size={10} className="mr-1" />
-            SMS
-          </Badge>
-        );
-      case "whatsapp":
-        return (
-          <Badge variant="outline" className="bg-green-500/10 text-green-500">
-            <MessageSquare size={10} className="mr-1" />
-            WhatsApp
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline">
-            <AlertCircle size={10} className="mr-1" />
-            Unknown
-          </Badge>
-        );
-    }
-  };
-  
-  const handleRefresh = () => {
+
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    
-    // Simulate refresh delay
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1000);
+    await refetch();
+    setTimeout(() => setIsRefreshing(false), 400);
+  };
+
+  const handleExport = async () => {
+    try {
+      const result = await api.exportMessages();
+      const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `message_logs_${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${result.count} messages`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Export failed");
+    }
+  };
+
+  const handleResend = async (id: string) => {
+    try {
+      await resend.mutateAsync(id);
+      toast.success("Message resent");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Resend failed");
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    try {
+      await cancelMsg.mutateAsync(id);
+      toast.success("Queued message cancelled");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Cancel failed");
+    }
+  };
+
+  /** Mirror what really happened on the device (device sends, or corrections). */
+  const handleMark = async (id: string, status: "sent" | "delivered" | "failed" | "cancelled") => {
+    try {
+      const updated = await api.markMessage(id, status);
+      setDetail(updated);
+      qc.invalidateQueries();
+      toast.success(`Marked ${status}`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Update failed");
+    }
+  };
+
+  const copyBody = (body: string) => {
+    navigator.clipboard.writeText(body);
+    toast.success("Message copied");
   };
 
   return (
     <Layout>
-      <div className="space-y-8">
-        {/* Page Header */}
+      <div className="space-y-8 page-enter">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
-                <a href="/dashboard">
-                  <ArrowLeft size={16} />
-                </a>
-              </Button>
-              <Badge variant="outline" size="sm">
-                <MessageSquare size={12} className="mr-1" />
-                Logs
-              </Badge>
+              <Link to="/dashboard">
+                <Button variant="ghost" size="sm" className="h-8 px-2"><ArrowLeft size={16} /></Button>
+              </Link>
+              <Badge variant="outline" size="sm"><MessageSquare size={12} className="mr-1" />Logs</Badge>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Message Logs</h1>
-            <p className="text-muted-foreground">
-              View and track all messages sent through the system
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight font-display">Message Logs</h1>
+            <p className="text-muted-foreground">Every message sent through Sorcery, with live delivery status</p>
           </div>
-          
           <div className="flex items-center space-x-3">
-            <Button variant="outline" size="sm">
-              <Download size={14} className="mr-1.5" />
-              Export Logs
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download size={14} className="mr-1.5" /> Export Logs
             </Button>
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-              <RefreshCcw size={14} className={`mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
+              <RefreshCcw size={14} className={`mr-1.5 ${isRefreshing ? "animate-spin" : ""}`} /> Refresh
             </Button>
           </div>
         </div>
-        
-        {/* Filters */}
+
         <Card variant="border">
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
               <div>
                 <CardTitle>Message History</CardTitle>
-                <CardDescription>
-                  Recent messages sent to recipients
-                </CardDescription>
+                <CardDescription>Recent messages sent to recipients</CardDescription>
               </div>
-              
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -199,26 +185,22 @@ const MessageLogs = () => {
                     placeholder="Search messages..."
                     className="pl-8 h-9 w-[180px] sm:w-[200px]"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                   />
                 </div>
-                
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-9 w-[130px]">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
+                <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+                  <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="sent">Sent</SelectItem>
+                    <SelectItem value="queued">Queued</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
-                
-                <Select value={channelFilter} onValueChange={setChannelFilter}>
-                  <SelectTrigger className="h-9 w-[130px]">
-                    <SelectValue placeholder="Filter by channel" />
-                  </SelectTrigger>
+                <Select value={channelFilter} onValueChange={(v) => { setChannelFilter(v); setPage(1); }}>
+                  <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Channel" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Channels</SelectItem>
                     <SelectItem value="sms">SMS</SelectItem>
@@ -228,113 +210,152 @@ const MessageLogs = () => {
               </div>
             </div>
           </CardHeader>
-          
+
           <CardContent>
-            {filteredLogs.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-2">{[1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton h-14" />)}</div>
+            ) : items.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <MessageSquare size={48} className="text-muted-foreground/30 mb-4" />
                 <h3 className="text-lg font-medium mb-2">No messages found</h3>
                 <p className="text-muted-foreground mb-6 max-w-md">
                   {searchQuery || statusFilter !== "all" || channelFilter !== "all"
                     ? "No messages match your current filters. Try changing or clearing your filters."
-                    : "No message history available yet. Send your first message to see logs here."}
+                    : "No message history yet. Send your first message to see logs here."}
                 </p>
-                {(searchQuery || statusFilter !== "all" || channelFilter !== "all") && (
-                  <Button variant="outline" onClick={() => {
-                    setSearchQuery("");
-                    setStatusFilter("all");
-                    setChannelFilter("all");
-                  }}>
-                    Clear Filters
-                  </Button>
+                {searchQuery || statusFilter !== "all" || channelFilter !== "all" ? (
+                  <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
+                ) : (
+                  <Link to="/sms-composer"><Button>Compose a message</Button></Link>
                 )}
               </div>
             ) : (
-              <div className="rounded-md border">
-                <div className="relative overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="px-4 py-3 text-left font-medium">Recipient</th>
-                        <th className="px-4 py-3 text-left font-medium">Message</th>
-                        <th className="px-4 py-3 text-left font-medium">Status</th>
-                        <th className="px-4 py-3 text-left font-medium">Channel</th>
-                        <th className="px-4 py-3 text-left font-medium">Timestamp</th>
-                        <th className="px-4 py-3 text-right font-medium"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredLogs.map((log) => (
-                        <tr key={log.id} className="border-b hover:bg-muted/50">
-                          <td className="px-4 py-3 font-medium">
-                            {log.recipient}
-                          </td>
+              <div className="rounded-md border overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="px-4 py-3 text-left font-medium">Recipient</th>
+                      <th className="px-4 py-3 text-left font-medium">Message</th>
+                      <th className="px-4 py-3 text-left font-medium">Status</th>
+                      <th className="px-4 py-3 text-left font-medium">Channel</th>
+                      <th className="px-4 py-3 text-left font-medium">Timestamp</th>
+                      <th className="px-4 py-3 text-right font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((log) => {
+                      const badge = STATUS_BADGES[log.status] ?? STATUS_BADGES.queued;
+                      return (
+                        <tr key={log.id} className="border-b hover:bg-muted/40 transition-colors">
+                          <td className="px-4 py-3 font-medium tabular">{log.toName || log.recipient}</td>
                           <td className="px-4 py-3 text-muted-foreground max-w-[300px]">
                             <p className="truncate">{log.content}</p>
                           </td>
                           <td className="px-4 py-3">
-                            {getStatusBadge(log.status)}
+                            <Badge variant="outline" className={badge.variant}>{badge.icon}{badge.label}</Badge>
                           </td>
                           <td className="px-4 py-3">
-                            {getChannelBadge(log.channel)}
+                            <Badge variant="outline" className={log.channel === "whatsapp" ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-primary"}>
+                              <MessageSquare size={10} className="mr-1" />
+                              {log.channel === "whatsapp" ? "WhatsApp" : "SMS"}
+                            </Badge>
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {formatDate(log.timestamp)}
-                          </td>
+                          <td className="px-4 py-3 text-muted-foreground tabular">{formatDate(log.timestamp)}</td>
                           <td className="px-4 py-3 text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal size={16} />
-                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal size={16} /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>View Details</DropdownMenuItem>
-                                <DropdownMenuItem>Resend Message</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setDetail(log)}>View Details</DropdownMenuItem>
+                                {["failed", "cancelled"].includes(log.status) && (
+                                  <DropdownMenuItem onClick={() => handleResend(log.id)}>Resend Message</DropdownMenuItem>
+                                )}
+                                {log.status === "queued" && (
+                                  <DropdownMenuItem onClick={() => handleCancel(log.id)}>Cancel Send</DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>Copy Message</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => copyBody(log.content)}>Copy Message</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
-          
+
           <CardFooter className="flex items-center justify-between pt-6">
             <div className="text-sm text-muted-foreground">
-              Showing <span className="font-medium">{filteredLogs.length}</span> of{" "}
-              <span className="font-medium">{messageLogsData.length}</span> messages
+              Showing <span className="font-medium tabular">{items.length}</span> of{" "}
+              <span className="font-medium tabular">{total}</span> messages
             </div>
-            
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious href="#" />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#" isActive>
-                    1
-                  </PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#">2</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext href="#" />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            {totalPages > 1 && (
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <span className="px-3 text-sm tabular">{page} / {totalPages}</span>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)); }} />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </CardFooter>
         </Card>
       </div>
+
+      <Dialog open={!!detail} onOpenChange={(open) => !open && setDetail(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Message details</DialogTitle>
+            <DialogDescription className="tabular">{detail?.recipient}</DialogDescription>
+          </DialogHeader>
+          {detail && (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-muted/60 p-4 text-sm whitespace-pre-wrap">{detail.content}</div>
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                <div><dt className="text-muted-foreground">Status</dt><dd className="font-medium capitalize">{detail.status}</dd></div>
+                <div><dt className="text-muted-foreground">Channel</dt><dd className="font-medium uppercase">{detail.channel}</dd></div>
+                <div>
+                  <dt className="text-muted-foreground">Provider</dt>
+                  <dd className="font-medium flex items-center gap-1.5">
+                    {isDeviceProvider(detail.provider) && <Smartphone size={13} className="text-primary" />}
+                    {providerLabel(detail.provider)}
+                  </dd>
+                </div>
+                <div><dt className="text-muted-foreground">Segments</dt><dd className="font-medium tabular">{detail.segments}</dd></div>
+                <div><dt className="text-muted-foreground">Created</dt><dd className="font-medium tabular">{formatDate(detail.createdAt)}</dd></div>
+                <div><dt className="text-muted-foreground">Sent</dt><dd className="font-medium tabular">{detail.sentAt ? formatDate(detail.sentAt) : "—"}</dd></div>
+                {detail.error && (
+                  <div className="col-span-2"><dt className="text-muted-foreground">Error</dt><dd className="text-destructive">{detail.error}</dd></div>
+                )}
+              </dl>
+              <div className="flex flex-wrap gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => copyBody(detail.content)}>Copy</Button>
+                {["queued", "sending", "sent"].includes(detail.status) && (
+                  <Button variant="outline" size="sm" onClick={() => handleMark(detail.id, "delivered")}>
+                    Mark delivered
+                  </Button>
+                )}
+                {detail.status !== "failed" && detail.status !== "cancelled" && (
+                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleMark(detail.id, "failed")}>
+                    Mark failed
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => handleResend(detail.id)}>Resend</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

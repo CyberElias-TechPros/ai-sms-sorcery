@@ -1,14 +1,26 @@
+/**
+ * AuthProvider — real session auth against the Sorcery API.
+ * Token lives in the persisted zustand store; every call is a bearer request.
+ */
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore, User, AuthCredentials } from '@/store/authStore';
 import { toast } from 'sonner';
+import { useAuthStore, User, AuthCredentials } from '@/store/authStore';
+import { api, ApiError } from '@/lib/api';
+
+export interface RegisterInput {
+  name: string;
+  email: string;
+  password: string;
+  phoneNumber?: string;
+}
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   login: (credentials: AuthCredentials) => Promise<boolean>;
-  register: (userData: Omit<User, 'id' | 'role'> & { password: string }) => Promise<boolean>;
+  register: (userData: RegisterInput) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
   updateUserProfile: (userData: Partial<User>) => Promise<boolean>;
@@ -26,170 +38,106 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
-  const { 
-    user, 
-    isAuthenticated, 
-    setUser, 
-    logout: storeLogout, 
-    setToken 
-  } = useAuthStore();
+  const { user, isAuthenticated, setUser, logout: storeLogout, setToken, token } = useAuthStore();
   const [loading, setLoading] = useState(true);
 
-  // Check for existing session on mount
+  // Restore + validate the session on mount and whenever a token appears.
   useEffect(() => {
+    let cancelled = false;
     const initAuth = async () => {
-      try {
-        // In a real app, this would validate the token with the backend
-        // For this demo, we'll just check if we have a user and token in the store
-        if (isAuthenticated && user) {
-          // Successful restoration of the session
-          console.log("Session restored for user:", user.email);
-        }
-      } catch (error) {
-        console.error("Failed to restore session:", error);
-        // If token validation fails, clear the session
-        storeLogout();
-      } finally {
-        // Always set loading to false once we've checked the session
+      if (!token) {
         setLoading(false);
+        return;
+      }
+      try {
+        const { user: fresh } = await api.me();
+        if (!cancelled) setUser(fresh);
+      } catch (err) {
+        if (!cancelled && err instanceof ApiError && err.status === 401) {
+          storeLogout();
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
-
     initAuth();
-  }, [isAuthenticated, user, storeLogout]);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
-  // Mock login function - in a real app, this would call your API
-  const login = async ({ email, password }: AuthCredentials): Promise<boolean> => {
+  const login = useCallback(async ({ email, password }: AuthCredentials): Promise<boolean> => {
     try {
       setLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simple validation for demo purposes
-      if (!email.includes('@') || password.length < 6) {
-        toast.error("Invalid email or password");
-        return false;
-      }
-      
-      // Create mock user for demo - in a real app, this would come from the API
-      const mockUser: User = {
-        id: `user_${Date.now()}`,
-        email: email,
-        name: email.split('@')[0],
-        role: 'user',
-        avatar: ''
-      };
-      
-      // Generate mock token - in a real app, this would come from the API
-      const mockToken = `mock_token_${Date.now()}`;
-      
-      // Update store
-      setUser(mockUser);
-      setToken(mockToken);
-      
-      toast.success("Login successful!");
-      
+      const result = await api.login({ email, password });
+      setUser(result.user);
+      setToken(result.token);
+      toast.success(`Welcome back, ${result.user.name.split(' ')[0]}`);
       return true;
     } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Login failed. Please try again.");
+      toast.error(error instanceof ApiError ? error.message : 'Login failed. Please try again.');
       return false;
     } finally {
       setLoading(false);
     }
-  };
+  }, [setUser, setToken]);
 
-  // Mock registration function - in a real app, this would call your API
-  const register = async (userData: Omit<User, 'id' | 'role'> & { password: string }): Promise<boolean> => {
+  const register = useCallback(async (userData: RegisterInput): Promise<boolean> => {
     try {
       setLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simple validation
-      if (!userData.email.includes('@')) {
-        toast.error("Invalid email address");
-        return false;
-      }
-      
-      if (userData.password.length < 6) {
-        toast.error("Password must be at least 6 characters");
-        return false;
-      }
-      
-      // Create new user - in a real app, this would be handled by the API
-      const newUser: User = {
-        ...userData,
-        id: `user_${Date.now()}`,
-        role: 'user'
-      };
-      
-      // Remove password from the user object that's stored in state
-      // (password should only be sent to the backend, not stored in frontend state)
-      const { password, ...userWithoutPassword } = newUser as (User & { password: string });
-      
-      // Generate mock token
-      const mockToken = `mock_token_${Date.now()}`;
-      
-      // Update store
-      setUser(userWithoutPassword);
-      setToken(mockToken);
-      
-      toast.success("Registration successful!");
-      
+      const result = await api.register({
+        email: userData.email,
+        password: userData.password,
+        name: userData.name,
+        phoneNumber: userData.phoneNumber || undefined,
+      });
+      setUser(result.user);
+      setToken(result.token);
+      toast.success('Your circle is open — welcome to Sorcery');
       return true;
     } catch (error) {
-      console.error("Registration error:", error);
-      toast.error("Registration failed. Please try again.");
+      toast.error(error instanceof ApiError ? error.message : 'Registration failed. Please try again.');
       return false;
     } finally {
       setLoading(false);
     }
-  };
+  }, [setUser, setToken]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
+    api.logout().catch(() => undefined);
     storeLogout();
     navigate('/auth');
-    toast.success("You have been logged out");
-  };
+    toast.success('You have been signed out');
+  }, [storeLogout, navigate]);
 
-  const updateUserProfile = async (userData: Partial<User>): Promise<boolean> => {
+  const updateUserProfile = useCallback(async (userData: Partial<User>): Promise<boolean> => {
     try {
       setLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      if (user) {
-        // Update user in store
-        const updatedUser = { ...user, ...userData };
-        setUser(updatedUser);
-        
-        toast.success("Profile updated successfully");
-        return true;
-      }
-      
-      return false;
+      const result = await api.updateProfile({
+        name: userData.name,
+        phoneNumber: userData.phoneNumber ?? undefined,
+        avatarUrl: userData.avatarUrl ?? userData.avatar ?? undefined,
+        email: userData.email,
+      });
+      setUser(result.user);
+      toast.success('Profile updated successfully');
+      return true;
     } catch (error) {
-      console.error("Profile update error:", error);
-      toast.error("Failed to update profile");
+      toast.error(error instanceof ApiError ? error.message : 'Failed to update profile');
       return false;
     } finally {
       setLoading(false);
     }
-  };
+  }, [setUser]);
 
   return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated, 
-      user, 
+    <AuthContext.Provider value={{
+      isAuthenticated,
+      user,
       login,
       register,
       logout,
       loading,
-      updateUserProfile
+      updateUserProfile,
     }}>
       {children}
     </AuthContext.Provider>
