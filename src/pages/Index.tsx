@@ -1,154 +1,352 @@
+/**
+ * Sorcery — landing experience.
+ * Cinematic hero + kinetic typography + editorial storytelling + bento capabilities.
+ * Every motion honors prefers-reduced-motion (sorcery.css).
+ */
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { MessageSquare, ArrowRight, BrainCircuit, Zap, BarChart3, Calendar } from "lucide-react";
+import {
+  ArrowRight, BrainCircuit, Calendar, BarChart3, MessageSquare, ShieldCheck,
+  Sparkles, Users, Zap,
+} from "lucide-react";
+import { Magnetic, ParallaxLayer, Reveal, WordCascade } from "@/lib/motion";
+
+const marqueeItems = [
+  "Divine AI copy", "SIM-native bulk sends", "Phone hand-off queue", "Scheduled campaigns",
+  "Delivery analytics", "Contact intelligence", "STOP-compliant", "Bulk personalization",
+];
+
+const capabilities = [
+  {
+    icon: BrainCircuit,
+    title: "Divine AI generation",
+    body: "Describe the intent — a flash sale, a gentle reminder, a shipping note — and receive ready-to-send copy with the right tone, length and call to action. Bring your own OpenAI, Claude, Gemini or Cohere key, or let the built-in Sorcery engine write for you.",
+    span: "md:col-span-2 lg:col-span-2",
+  },
+  {
+    icon: MessageSquare,
+    title: "Your phone is the sender",
+    body: "Bulk blasts walk your phone's own SMS app — your SIM, your number, your network — one confirm at a time. WhatsApp joins the same flow. Cloud gateways stay optional.",
+    span: "",
+  },
+  {
+    icon: Users,
+    title: "Contacts with memory",
+    body: "Groups, tags, notes and opt-out status. Imported, exported, deduplicated — and honored at send time.",
+    span: "",
+  },
+  {
+    icon: Calendar,
+    title: "Campaigns on rails",
+    body: "Draft it, schedule it, pause it, duplicate it, fire it now. Cron dispatches the moment arrives — you stay in control the whole way.",
+    span: "md:col-span-2",
+  },
+  {
+    icon: BarChart3,
+    title: "Truthful analytics",
+    body: "Delivery rates, channel splits and category trends computed from your real message log — never invented.",
+    span: "md:col-span-2 lg:col-span-2",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Compliance, built-in",
+    body: "Opt-out footers and STOP-awareness on by default. Keys encrypted at rest.",
+    span: "",
+  },
+];
+
+const journey = [
+  { step: "01", title: "Write the spell", body: "Brief the AI or start from a template. Every message shows its segment count before it leaves." },
+  { step: "02", title: "Choose your circle", body: "Select contacts individually or personalize a whole group in one pass." },
+  { step: "03", title: "Send from your SIM", body: "Walk the queue recipient-by-recipient through your phone's own SMS app — you tap send, you stay in control. Cloud or scheduled dispatch is there when you want it." },
+  { step: "04", title: "Watch it land", body: "Live delivery states flow into logs and analytics — carrier confirmations or outcomes you mark from the phone itself." },
+];
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header/Navigation */}
-      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-30">
+    <div className="min-h-screen flex flex-col bg-[hsl(244_24%_5%)] text-[hsl(40_20%_95%)] overflow-hidden">
+      {/* ── Nav ─────────────────────────────────────────────── */}
+      <header className="fixed top-0 inset-x-0 z-50 border-b border-white/5 bg-[hsl(244_24%_5%)]/70 backdrop-blur-xl">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <div className="flex items-center">
-            <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
-              <MessageSquare size={18} className="text-white" />
-            </div>
-            <h1 className="font-bold text-lg tracking-tight">SMS Messenger</h1>
-          </div>
-          
-          <div className="hidden md:flex items-center space-x-6">
-            <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</button>
-            <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</button>
-            <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">Documentation</button>
-            <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</button>
-          </div>
-          
-          <div className="flex items-center space-x-4">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <span className="relative h-9 w-9 rounded-xl bg-gradient-to-br from-[hsl(262_83%_62%)] to-[hsl(322_76%_62%)] flex items-center justify-center shadow-glow transition-transform duration-500 group-hover:rotate-[8deg]">
+              <Sparkles size={17} className="text-white" />
+            </span>
+            <span className="font-display font-semibold text-lg tracking-tight">Sorcery</span>
+          </Link>
+
+          <nav className="hidden md:flex items-center space-x-8 text-sm text-white/60">
+            <a href="#craft" className="link-draw hover:text-white transition-colors">The Craft</a>
+            <a href="#capabilities" className="link-draw hover:text-white transition-colors">Capabilities</a>
+            <a href="#journey" className="link-draw hover:text-white transition-colors">How it flows</a>
+          </nav>
+
+          <div className="flex items-center space-x-3">
+            <Link to="/auth"><Button variant="ghost" size="sm" className="text-white/80 hover:text-white">Sign In</Button></Link>
             <Link to="/auth">
-              <Button variant="outline" size="sm">Sign In</Button>
-            </Link>
-            <Link to="/auth">
-              <Button size="sm">Sign Up</Button>
+              <Magnetic strength={0.18}>
+                <Button size="sm" className="bg-white text-[hsl(244_24%_5%)] hover:bg-white/90 font-medium">
+                  Get Started <ArrowRight size={14} className="ml-1" />
+                </Button>
+              </Magnetic>
             </Link>
           </div>
         </div>
       </header>
-      
-      {/* Hero Section */}
-      <section className="flex-1 flex flex-col items-center justify-center py-16 md:py-24 px-4">
-        <div className="container mx-auto">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center justify-center px-3 py-1 mb-6 border border-border rounded-full bg-background/50 backdrop-blur-sm">
-              <span className="text-xs font-medium text-muted-foreground">AI-Powered Messaging Platform</span>
+
+      {/* ── Hero ────────────────────────────────────────────── */}
+      <section className="relative min-h-[100svh] flex items-center pt-16">
+        {/* atmosphere */}
+        <div className="aurora" aria-hidden>
+          <div className="aurora__blob aurora__blob--a" />
+          <div className="aurora__blob aurora__blob--b" />
+          <div className="aurora__blob aurora__blob--c" />
+        </div>
+        <div className="veil veil--grain bg-noise" aria-hidden />
+        <div className="veil veil--vignette" aria-hidden />
+
+        {/* floating message bubbles — the signature layer */}
+        <ParallaxLayer depth={18} className="hidden lg:block absolute right-[6%] top-1/2 -translate-y-1/2 w-[380px]" >
+          <div className="space-y-4">
+            <div className="float-bubble max-w-[300px] rounded-2xl rounded-bl-sm bg-white/[0.07] border border-white/10 backdrop-blur-md px-5 py-3.5 text-sm shadow-glass">
+              Flash sale tonight — 30% off everything. Code <span className="text-[hsl(43_84%_60%)]">MOON30</span> 🌙
+              <p className="text-[10px] text-white/40 mt-1.5 tabular">delivered · 1 segment</p>
             </div>
-            
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 animate-slide-down">
-              Transform your messaging with 
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent ml-2">
-                Divine AI
+            <div className="float-bubble ml-auto max-w-[280px] rounded-2xl rounded-br-sm bg-gradient-to-br from-[hsl(262_83%_62%)]/30 to-[hsl(322_76%_62%)]/25 border border-white/15 backdrop-blur-md px-5 py-3.5 text-sm shadow-glass">
+              Hi Amara — your appointment is tomorrow at 3 PM. Reply CONFIRM ✨
+              <p className="text-[10px] text-white/40 mt-1.5 tabular">delivered · personalized</p>
+            </div>
+            <div className="float-bubble max-w-[260px] rounded-2xl rounded-bl-sm bg-white/[0.07] border border-white/10 backdrop-blur-md px-5 py-3.5 text-sm shadow-glass">
+              Your order shipped! Track it anytime. Reply STOP to unsubscribe.
+              <p className="text-[10px] text-white/40 mt-1.5 tabular">compliant · auto-footer</p>
+            </div>
+          </div>
+        </ParallaxLayer>
+
+        <div className="container relative z-10 mx-auto px-4">
+          <div className="max-w-3xl">
+            <div
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 mb-8 rounded-full border border-white/15 bg-white/[0.06] backdrop-blur-md text-xs text-white/70 mask-reveal"
+              style={{ animationDelay: "100ms" }}
+            >
+              <span className="pulse-ring h-1.5 w-1.5 rounded-full bg-[hsl(152_48%_52%)]" />
+              AI-powered messaging studio · SIM-native
+            </div>
+
+            <h1 className="font-display font-semibold leading-[0.95] tracking-tight text-[clamp(2.8rem,8vw,5.5rem)] mb-8">
+              <WordCascade text="Spread your word." startDelay={200} />
+              <br />
+              <span className="text-gradient italic">
+                <WordCascade text="With divine precision." startDelay={520} />
               </span>
             </h1>
-            
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-slide-down animate-delay-100">
-              Create personalized, engaging messages with divine intelligence. Connect your favorite messaging APIs and spread your message with faith and purpose.
+
+            <p
+              className="text-lg md:text-xl text-white/60 max-w-xl mb-10 leading-relaxed mask-reveal"
+              style={{ animationDelay: "900ms" }}
+            >
+              Sorcery composes on-brand SMS &amp; WhatsApp messages in seconds, organizes your audience
+              into a paced send queue, and hands each message to your own phone — your SIM, your number,
+              your network — proving every delivery in one calm, cinematic workspace.
             </p>
-            
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-down animate-delay-200">
+
+            <div className="flex flex-col sm:flex-row items-start gap-4 mask-reveal" style={{ animationDelay: "1100ms" }}>
               <Link to="/auth">
-                <Button size="lg" className="w-full sm:w-auto">
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <Magnetic strength={0.22}>
+                  <Button size="lg" className="bg-white text-[hsl(244_24%_5%)] hover:bg-white/90 font-medium px-8 shadow-glow">
+                    Begin casting <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Magnetic>
               </Link>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                View Demo
-              </Button>
+              <a href="#craft">
+                <Button size="lg" variant="ghost" className="text-white/70 hover:text-white border border-white/10 hover:border-white/25 transition-colors">
+                  See the craft
+                </Button>
+              </a>
             </div>
           </div>
         </div>
+
+        {/* scroll hint */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.35em] text-white/30 mask-reveal" style={{ animationDelay: "1500ms" }}>
+          scroll
+        </div>
       </section>
-      
-      {/* Features Section */}
-      <section className="bg-muted/30 py-16 md:py-24 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Powerful Features</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to create, send, and analyze your message campaigns
+
+      {/* ── Kinetic marquee ─────────────────────────────────── */}
+      <section className="relative border-y border-white/5 py-5 overflow-hidden bg-white/[0.02]">
+        <div className="marquee gap-10 text-sm text-white/40 uppercase tracking-[0.25em]" aria-hidden>
+          {[...marqueeItems, ...marqueeItems].map((item, i) => (
+            <span key={i} className="flex items-center gap-10 whitespace-nowrap">
+              {item} <Sparkles size={11} className="text-[hsl(43_84%_60%)]" />
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* ── The Craft — editorial split ─────────────────────── */}
+      <section id="craft" className="relative py-28 md:py-40">
+        <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+          <div className="lg:col-span-5">
+            <Reveal>
+              <p className="text-xs uppercase tracking-[0.35em] text-[hsl(43_84%_60%)] mb-5">The craft</p>
+              <h2 className="font-display text-4xl md:text-5xl font-semibold leading-[1.05] mb-6">
+                Messages that feel
+                <span className="text-gradient italic"> written, not generated</span>
+              </h2>
+              <p className="text-white/55 leading-relaxed mb-6">
+                Great messaging is 10% typing and 90% judgment: the right tone for this audience,
+                the right length for a single segment, one clear action, and an honest opt-out.
+                Sorcery encodes that judgment — then hands you the pen.
+              </p>
+              <ul className="space-y-3 text-sm text-white/60">
+                {[
+                  "Segment-aware composer — know before you send",
+                  "{{name}} personalization across whole groups",
+                  "Template provenance: which model wrote what",
+                  "Opt-outs honored on every path — SIM or cloud",
+                ].map((line, i) => (
+                  <Reveal key={line} delay={i * 90} y={16}>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-gradient-to-br from-[hsl(262_83%_62%)] to-[hsl(43_84%_60%)] shrink-0" />
+                      {line}
+                    </li>
+                  </Reveal>
+                ))}
+              </ul>
+            </Reveal>
+          </div>
+
+          {/* layered composition */}
+          <ParallaxLayer depth={14} className="lg:col-span-7 relative">
+            <Reveal delay={120}>
+              <div className="relative mx-auto max-w-xl">
+                <div className="absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-[hsl(262_83%_62%)]/20 via-transparent to-[hsl(174_62%_45%)]/15 blur-2xl" aria-hidden />
+                <div className="relative rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-xl p-8 shadow-glass">
+                  <p className="text-xs text-white/40 uppercase tracking-widest mb-4">Sorcery · AI brief</p>
+                  <p className="text-white/80 mb-6">“Promo for our midnight drop — mysterious, a little playful, under 160 chars.”</p>
+                  <div className="rounded-xl bg-gradient-to-br from-[hsl(262_83%_62%)]/25 to-[hsl(322_76%_62%)]/15 border border-white/10 p-5">
+                    <p className="text-white/90 leading-relaxed">
+                      The vault opens at midnight. 30% off everything that glows. Code MOONRISE. Reply YES to claim your early look.
+                    </p>
+                    <p className="text-[10px] text-white/40 mt-3 tabular">153 chars · 1 segment · GSM-7 · STOP appended</p>
+                  </div>
+                  <div className="flex gap-2 mt-5">
+                    <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-white/50">variant 1</span>
+                    <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-white/50">variant 2</span>
+                    <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-[10px] text-white/80">variant 3</span>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </ParallaxLayer>
+        </div>
+      </section>
+
+      {/* ── Capabilities — bento ────────────────────────────── */}
+      <section id="capabilities" className="relative py-24 md:py-32">
+        <div className="container mx-auto px-4">
+          <Reveal className="max-w-2xl mb-14">
+            <p className="text-xs uppercase tracking-[0.35em] text-[hsl(43_84%_60%)] mb-4">Capabilities</p>
+            <h2 className="font-display text-4xl md:text-5xl font-semibold leading-[1.05]">
+              Everything the ritual needs
+            </h2>
+          </Reveal>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {capabilities.map((cap, i) => (
+              <Reveal key={cap.title} delay={i * 70} className={cap.span}>
+                <div
+                  className="group h-full rounded-2xl border border-white/10 bg-white/[0.04] p-7 spotlight transition-all duration-500 hover:border-white/25 hover:bg-white/[0.07] hover:-translate-y-1"
+                  onMouseMove={(e) => {
+                    const el = e.currentTarget;
+                    const rect = el.getBoundingClientRect();
+                    el.style.setProperty("--spot-x", `${e.clientX - rect.left}px`);
+                    el.style.setProperty("--spot-y", `${e.clientY - rect.top}px`);
+                  }}
+                >
+                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[hsl(262_83%_62%)]/25 to-[hsl(322_76%_62%)]/15 border border-white/10 flex items-center justify-center mb-5 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-[6deg]">
+                    <cap.icon size={19} className="text-[hsl(262_83%_72%)]" />
+                  </div>
+                  <h3 className="font-display text-xl font-medium mb-2.5">{cap.title}</h3>
+                  <p className="text-sm text-white/50 leading-relaxed">{cap.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Journey ─────────────────────────────────────────── */}
+      <section id="journey" className="relative py-24 md:py-32 border-t border-white/5">
+        <div className="container mx-auto px-4">
+          <Reveal className="max-w-2xl mb-14">
+            <p className="text-xs uppercase tracking-[0.35em] text-[hsl(43_84%_60%)] mb-4">How it flows</p>
+            <h2 className="font-display text-4xl md:text-5xl font-semibold leading-[1.05]">
+              From intention to <span className="text-gradient italic">inbox</span>
+            </h2>
+          </Reveal>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {journey.map((j, i) => (
+              <Reveal key={j.step} delay={i * 100}>
+                <div className="relative h-full pt-8 border-t border-white/15">
+                  <span className="absolute -top-px left-0 h-px w-14 bg-gradient-to-r from-[hsl(262_83%_62%)] to-transparent" aria-hidden />
+                  <p className="font-display text-5xl font-light text-white/15 mb-4 tabular">{j.step}</p>
+                  <h3 className="font-display text-xl font-medium mb-2">{j.title}</h3>
+                  <p className="text-sm text-white/50 leading-relaxed">{j.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Final CTA ───────────────────────────────────────── */}
+      <section className="relative py-32 overflow-hidden">
+        <div className="aurora opacity-40" aria-hidden>
+          <div className="aurora__blob aurora__blob--a" />
+          <div className="aurora__blob aurora__blob--b" />
+        </div>
+        <div className="veil veil--grain bg-noise" aria-hidden />
+        <div className="container relative z-10 mx-auto px-4 text-center">
+          <Reveal>
+            <h2 className="font-display text-5xl md:text-7xl font-semibold leading-[1] mb-8">
+              Ready to make
+              <br />
+              <span className="text-gradient italic">words travel?</span>
+            </h2>
+            <p className="text-white/55 max-w-xl mx-auto mb-10">
+              Send free through your own SIM — sandbox delivery and the Sorcery engine included,
+              so the magic works before you ever paste a key.
             </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Feature 1 */}
-            <div className="bg-card p-6 rounded-xl border shadow-subtle hover:shadow-elevated transition-all duration-300 animate-scale-in">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <BrainCircuit className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">AI-Powered Generation</h3>
-              <p className="text-muted-foreground text-sm">
-                Create engaging messages using advanced AI models like GPT-4, Claude, and Gemini.
-              </p>
-            </div>
-            
-            {/* Feature 2 */}
-            <div className="bg-card p-6 rounded-xl border shadow-subtle hover:shadow-elevated transition-all duration-300 animate-scale-in animate-delay-100">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Zap className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">Multiple Channel Support</h3>
-              <p className="text-muted-foreground text-sm">
-                Connect with SMS, WhatsApp, and other messaging channels through a single interface.
-              </p>
-            </div>
-            
-            {/* Feature 3 */}
-            <div className="bg-card p-6 rounded-xl border shadow-subtle hover:shadow-elevated transition-all duration-300 animate-scale-in animate-delay-150">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Calendar className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">Automated Scheduling</h3>
-              <p className="text-muted-foreground text-sm">
-                Schedule campaigns in advance and optimize send times for maximum engagement.
-              </p>
-            </div>
-            
-            {/* Feature 4 */}
-            <div className="bg-card p-6 rounded-xl border shadow-subtle hover:shadow-elevated transition-all duration-300 animate-scale-in animate-delay-200">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <BarChart3 className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">Analytics & Insights</h3>
-              <p className="text-muted-foreground text-sm">
-                Track delivery rates, engagement metrics, and optimize your messaging strategy.
-              </p>
-            </div>
-          </div>
+            <Link to="/auth">
+              <Magnetic strength={0.25}>
+                <Button size="lg" className="bg-white text-[hsl(244_24%_5%)] hover:bg-white/90 font-medium px-10 py-7 text-base shadow-glow">
+                  Open the studio <Zap className="ml-2 h-4 w-4" />
+                </Button>
+              </Magnetic>
+            </Link>
+          </Reveal>
         </div>
       </section>
-      
-      {/* Footer */}
-      <footer className="bg-card border-t py-12 px-4">
-        <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-6 md:mb-0">
-              <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mr-2">
-                <MessageSquare size={18} className="text-white" />
-              </div>
-              <span className="font-bold">SMS Messenger</span>
-            </div>
-            
-            <div className="flex flex-wrap justify-center gap-6 mb-6 md:mb-0">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Documentation</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Blog</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</a>
-            </div>
-            
-            <div className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} SMS Messenger. All rights reserved.
-            </div>
+
+      {/* ── Footer ──────────────────────────────────────────── */}
+      <footer className="border-t border-white/5 py-10">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-2.5">
+            <span className="h-8 w-8 rounded-lg bg-gradient-to-br from-[hsl(262_83%_62%)] to-[hsl(322_76%_62%)] flex items-center justify-center">
+              <Sparkles size={14} className="text-white" />
+            </span>
+            <span className="font-display font-semibold">Sorcery</span>
           </div>
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-white/40">
+            <a href="#capabilities" className="link-draw hover:text-white/80 transition-colors">Capabilities</a>
+            <a href="#journey" className="link-draw hover:text-white/80 transition-colors">How it flows</a>
+            <Link to="/auth" className="link-draw hover:text-white/80 transition-colors">Sign in</Link>
+          </div>
+          <p className="text-sm text-white/30">© {new Date().getFullYear()} Sorcery. Words, sent from your phone.</p>
         </div>
       </footer>
     </div>

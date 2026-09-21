@@ -1,0 +1,5 @@
+# Local dev secrets (miniflare) — copy to .dev.vars (git-ignored).
+# Generate the encryption key with:  openssl rand -base64 32
+CREDENTIALS_ENCRYPTION_KEY=REPLACE_WITH_base64_32_bytes
+CORS_ORIGINS=*
+ENVIRONMENT=local

@@ -1,3 +1,8 @@
+/**
+ * AuthForm — live register / sign-in against the Sorcery API.
+ * Client validation mirrors the server policy (8+ chars, letter + number).
+ */
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui-custom/Button";
@@ -6,222 +11,142 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/providers/AuthProvider";
-import { Loader2, LucideMessageSquare, BrainCircuit, Check } from "lucide-react";
+import { Loader2, Sparkles, Check } from "lucide-react";
 
 const AuthForm = () => {
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [registerName, setRegisterName] = useState("");
-  const [registerEmail, setRegisterEmail] = useState("");
-  const [registerPassword, setRegisterPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [mode, setMode] = useState<"login" | "register">("login");
   const { login, register, loading } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (await login({ email: loginEmail, password: loginPassword })) {
-      navigate("/dashboard");
-    }
-  };
+  const passwordOk = password.length >= 8 && /[a-zA-Z]/.test(password) && /[0-9]/.test(password);
+  const canSubmit =
+    email.includes("@") &&
+    password.length >= (mode === "register" ? 8 : 1) &&
+    (mode === "login" || (name.trim().length >= 2 && passwordOk));
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (registerPassword !== confirmPassword) {
-      // Toast is handled in the provider
-      return;
-    }
-    
-    if (await register({
-      email: registerEmail,
-      name: registerName,
-      password: registerPassword,
-    })) {
-      navigate("/dashboard");
-    }
+    if (!canSubmit) return;
+    const ok =
+      mode === "login"
+        ? await login({ email, password })
+        : await register({ email, password, name, phoneNumber: phone || undefined });
+    if (ok) navigate("/dashboard");
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg animate-fade-in">
-      <CardHeader className="space-y-1 text-center">
-        <div className="flex justify-center mb-2">
-          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <LucideMessageSquare className="h-6 w-6 text-primary" />
-          </div>
-        </div>
-        <CardTitle className="text-2xl">SMS AI Platform</CardTitle>
-        <CardDescription>
-          Sign in to your account or create a new one
+    <Card className="w-full max-w-md border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-glass text-[hsl(40_20%_95%)]">
+      <CardHeader className="text-center pb-4">
+        <CardTitle className="font-display text-3xl font-semibold">Welcome</CardTitle>
+        <CardDescription className="text-white/50">
+          {mode === "login" ? "Sign in to your messaging studio" : "Create your studio — 500 free messages included"}
         </CardDescription>
       </CardHeader>
-      <CardContent className="pb-3">
-        <Tabs defaultValue="login" value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")}>
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="login">
-            <form onSubmit={handleLogin} className="space-y-4">
+
+      <Tabs value={mode} onValueChange={(v) => setMode(v as "login" | "register")} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mx-6 w-[calc(100%-3rem)] bg-white/5 border border-white/10">
+          <TabsTrigger value="login" className="data-[state=active]:bg-white/10">Sign In</TabsTrigger>
+          <TabsTrigger value="register" className="data-[state=active]:bg-white/10">Create Account</TabsTrigger>
+        </TabsList>
+
+        <form onSubmit={handleSubmit}>
+          <TabsContent value="login" className="pt-4">
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="your.email@example.com" 
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  required
+                <Input
+                  id="email" type="email" autoComplete="email" required
+                  placeholder="you@example.com"
+                  value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <a 
-                    href="#" 
-                    className="text-xs text-primary hover:underline"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      // In a real app, this would navigate to a password reset page
-                      alert("Password reset functionality would be here in a complete app");
-                    }}
-                  >
-                    Forgot password?
-                  </a>
-                </div>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  required
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password" type="password" autoComplete="current-password" required
+                  placeholder="••••••••"
+                  value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>
-              <Button className="w-full" type="submit" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Logging in...
-                  </>
-                ) : (
-                  <>Sign in</>
-                )}
-              </Button>
-            </form>
+            </CardContent>
           </TabsContent>
-          
-          <TabsContent value="register">
-            <form onSubmit={handleRegister} className="space-y-4">
+
+          <TabsContent value="register" className="pt-4">
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input 
-                  id="name" 
-                  placeholder="John Doe" 
-                  value={registerName}
-                  onChange={(e) => setRegisterName(e.target.value)}
-                  required
+                <Label htmlFor="name">Full name</Label>
+                <Input
+                  id="name" autoComplete="name" required
+                  placeholder="Ada Lovelace"
+                  value={name} onChange={(e) => setName(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="register-email">Email</Label>
-                <Input 
-                  id="register-email" 
-                  type="email" 
-                  placeholder="your.email@example.com" 
-                  value={registerEmail}
-                  onChange={(e) => setRegisterEmail(e.target.value)}
-                  required
+                <Label htmlFor="reg-email">Email</Label>
+                <Input
+                  id="reg-email" type="email" autoComplete="email" required
+                  placeholder="you@example.com"
+                  value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="register-password">Password</Label>
-                <Input 
-                  id="register-password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={registerPassword}
-                  onChange={(e) => setRegisterPassword(e.target.value)}
-                  required
+                <Label htmlFor="reg-phone">Phone <span className="text-white/30">(optional)</span></Label>
+                <Input
+                  id="reg-phone" type="tel" autoComplete="tel"
+                  placeholder="+12025550142"
+                  value={phone} onChange={(e) => setPhone(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 tabular"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input 
-                  id="confirm-password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
+                <Label htmlFor="reg-password">Password</Label>
+                <Input
+                  id="reg-password" type="password" autoComplete="new-password" required
+                  placeholder="8+ characters with a number"
+                  value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
                 />
-              </div>
-              <Button className="w-full" type="submit" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
-                  </>
-                ) : (
-                  <>Create account</>
+                {password.length > 0 && (
+                  <p className={`text-xs flex items-center gap-1 ${passwordOk ? "text-[hsl(152_48%_52%)]" : "text-white/40"}`}>
+                    {passwordOk ? <Check size={12} /> : null}
+                    8+ characters with at least one letter and one number
+                  </p>
                 )}
-              </Button>
-            </form>
+              </div>
+            </CardContent>
           </TabsContent>
-        </Tabs>
-      </CardContent>
-      <CardFooter className="flex flex-col space-y-4 pt-0">
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-muted" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
-            </span>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="outline" disabled>
-            <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"></path>
-            </svg>
-            Google
-          </Button>
-          <Button variant="outline" disabled>
-            <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M16.365 1.43c0 1.14-.788 2.042-1.97 2.042-1.174 0-2.042-.879-2.042-2.027 0-1.147.868-2.077 2.042-2.077 1.175 0 1.973.93 1.973 2.052z"></path>
-            </svg>
-            GitHub
-          </Button>
-        </div>
-      </CardFooter>
-      <div className="mt-4 px-8 py-4 bg-muted/50 rounded-b-lg">
-        <div className="flex items-start space-x-4">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <BrainCircuit className="h-5 w-5 text-primary" />
-          </div>
-          <div className="space-y-1 text-sm">
-            <h4 className="font-medium">Our AI-powered platform enables you to:</h4>
-            <ul className="space-y-1">
-              <li className="flex items-center">
-                <Check className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                Generate professional SMS messages with AI
-              </li>
-              <li className="flex items-center">
-                <Check className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                Connect with multiple SMS providers
-              </li>
-              <li className="flex items-center">
-                <Check className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                Schedule and automate your messaging campaigns
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
+
+          <CardFooter className="flex flex-col gap-3 pb-6">
+            <Button
+              type="submit"
+              size="lg"
+              disabled={!canSubmit || loading}
+              className="w-full bg-white text-[hsl(244_24%_5%)] hover:bg-white/90 font-medium shadow-glow"
+            >
+              {loading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : mode === "login" ? (
+                "Enter the studio"
+              ) : (
+                <>
+                  <Sparkles size={15} className="mr-2" /> Create my studio
+                </>
+              )}
+            </Button>
+            <p className="text-[11px] text-white/35 text-center leading-relaxed">
+              Keys stay encrypted. Messages stay yours. Cancel anytime by deleting your account.
+            </p>
+          </CardFooter>
+        </form>
+      </Tabs>
     </Card>
   );
 };
