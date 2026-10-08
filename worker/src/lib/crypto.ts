@@ -46,7 +46,7 @@ export async function sha256Hex(input: string): Promise<string> {
   return toHex(digest);
 }
 
-const PBKDF2_ITERATIONS = 210_000; // OWASP 2023+ guidance for PBKDF2-HMAC-SHA256
+  const PBKDF2_ITERATIONS = 100_000; // Workers CPU ceiling (higher counts 500 auth paths)
 
 export async function hashPassword(password: string): Promise<{ hash: string; salt: string }> {
   const saltBytes = new Uint8Array(16);
