@@ -24,13 +24,13 @@ ENVIRONMENT = "production"
 [[d1_databases]]
 binding = "DB"
 database_name = "ai_sms_sorcery"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "21da542c-b0ed-4fdf-9183-1da8ad48cf62"
 migrations_dir = "migrations"
 
 # ── KV (rate limiting + short-lived cache) ──
 [[kv_namespaces]]
 binding = "KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "d3af165b8ab2485b89c0b8fbe1e5eea8"
 
 # ── Queues (async SMS dispatch + retries) ──
 [[queues.producers]]
